@@ -1,0 +1,34 @@
+# dsh-plugin-office-markdown bundle patch: inserts one plugin row into the
+# profile roster. Install by copying this package into the profile's
+# node_modules and adding `dsh-plugin-office-markdown` to
+# `dsh.profile.bundles` in the profile package.json (see README.md).
+#
+# The row references the package by name; `exports["."]` is the host half that
+# registers the `read_office_as_markdown` tool plus its bundled skill.
+#
+# `config` below restates every owned key so later profile layers can override
+# individual values while keeping this bundle first in the stack.
+- insert:
+    - id: office-markdown
+      name: dsh-plugin-office-markdown
+      config:
+        enabled: true
+        tmpDir: ''
+        converter: auto
+        pythonPath: ''
+        pythonPrefer: auto
+        allowUvxDownload: true
+        uvxExtras: 'markitdown[all]'
+        fallbackEnabled: true
+        guardReadTool: true
+        probeTtlMs: 600000
+        timeoutMs: 300000
+        reuseFresh: true
+        maxPreviewChars: 4000
+        maxRowsPerSheet: 400
+        maxTableCols: 24
+        maxCellsPerSheet: 20000
+        registerSkill: true
+        registerSettings: true
+        autoAdoptEnv: true
+        removeEnvOnUninstall: true
