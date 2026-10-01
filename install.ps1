@@ -10,7 +10,12 @@
        请重启 DSH 后打开 设置 → Office 转换，在插件自带的设置页里点
        「一键配置 MarkItDown 环境」——装哪个解释器由你当场选。
     3) 在 <ProfileDir>\cordis.patch.yml 末尾写入一个受管 insert 块（带 BEGIN/END 标记）
-    4) 可选：把包名登记进 profile package.json 的 dsh.profile.bundles
+    4) 可选 -RegisterBundle：装成正规 bundle。把源码打成 tarball 放进
+       <DSH 数据目录>\local-packages\，在 profile package.json 里同时登记
+       dsh.profile.bundles 与 dependencies 的 file: 指向，再用 DSH 自带的 pnpm
+       跑一次 install。只有这样装，插件才会出现在 DSH 的「设置 → 插件」页面，
+       并且能拿到卸载按钮。此模式下不再写 cordis.patch.yml 受管块（bundle 自带
+       一份），若检测到旧的受管块会被移除，避免同一插件被加载两次。
 
     所有被改动的文件都会先备份成 <文件名>.bak（固定文件名，每次覆盖，不会随时间累积）。
 
@@ -47,7 +52,14 @@
     两者都能达到“关闭”的效果。
 
 .PARAMETER RegisterBundle
-    同时把包名加入 profile package.json 的 dsh.profile.bundles（需自行保证包已可解析）。
+    装成正规 bundle：把源码打成 tarball 放进 <DSH 数据目录>\local-packages\，
+    在 profile package.json 里同时登记 dsh.profile.bundles 与 dependencies 的
+    file: 指向，再用 DSH 自带的 pnpm 跑一次 install。
+    只有这样装，插件才会出现在 DSH 的「设置 → 插件」页面，并且能一键卸载。
+    此模式下不再写 cordis.patch.yml 受管块（bundle 自带一份），
+    若检测到旧的受管块会被移除，避免同一插件被加载两次。
+    注意：pnpm 对 file: tarball 是按「路径 + 版本号」缓存的，改完 lib\*.js 之后
+    必须先把 package.json 的 version 升一位，否则装上去的还是旧内容。
 
 .PARAMETER KeepMarkitdown
     卸载时保留已经装好的 markitdown 及其依赖，不做 pip uninstall（只删快照）。
@@ -380,17 +392,103 @@ if ($text.Contains($BeginMark)) {
 }
 Write-Utf8 $patchPath $text
 
-# ---------------------------------------------------------------- 可选：登记 bundle
-if ($RegisterBundle -and (Test-Path -LiteralPath $pkgJsonPath)) {
+# ---------------------------------------------------------------- 可选：装成正规 bundle
+if ($RegisterBundle) {
+    if (-not (Test-Path -LiteralPath $pkgJsonPath)) { throw "找不到 profile package.json: $pkgJsonPath" }
+
+    # 1) 读源码版本号
+    $srcPkg = (Read-Utf8 (Join-Path $SourceDir 'package.json')) | ConvertFrom-Json
+    $version = $srcPkg.version
+    if (-not $version) { throw "源 package.json 里没有 version" }
+
+    # 2) 打成 tarball（必须包含 package.json，否则 pnpm 会写一个占位 manifest）
+    $tarExe = Join-Path $env:SystemRoot 'System32\tar.exe'
+    if (-not (Test-Path -LiteralPath $tarExe)) { throw "找不到 tar.exe（需要 Windows 10 1803 及以上）: $tarExe" }
+    $stageRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("om-pack-" + [guid]::NewGuid().ToString('N').Substring(0, 8))
+    $stagePkg = Join-Path $stageRoot 'package'
+    New-Item -ItemType Directory -Force -Path $stagePkg | Out-Null
+    foreach ($name in @('lib', 'cordis.patch.yml', 'README.md', 'LICENSE', 'package.json')) {
+        $src = Join-Path $SourceDir $name
+        if (Test-Path -LiteralPath $src) { Copy-Item -LiteralPath $src -Destination $stagePkg -Recurse -Force }
+    }
+    Get-ChildItem -LiteralPath $stagePkg -Recurse -Force -Directory -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -eq '__pycache__' } | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+    $tarballTmp = Join-Path $stageRoot "$PackageName-$version.tgz"
+    $prevEap = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
+    try { & $tarExe -czf $tarballTmp -C $stageRoot package 2>&1 | Out-Null } finally { $ErrorActionPreference = $prevEap }
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $tarballTmp)) { throw "tar 打包失败（退出码 $LASTEXITCODE）" }
+
+    # 3) 放进 <DSH 数据目录>\local-packages\
+    $localPkgDir = Join-Path $DshHome 'local-packages'
+    New-Item -ItemType Directory -Force -Path $localPkgDir | Out-Null
+    $tarballDst = Join-Path $localPkgDir "$PackageName-$version.tgz"
+    Copy-Item -LiteralPath $tarballTmp -Destination $tarballDst -Force
+    Remove-Item -LiteralPath $stageRoot -Recurse -Force -ErrorAction SilentlyContinue
+    Write-Ok "已生成 tarball: $tarballDst ($(Format-Bytes (Get-Item -LiteralPath $tarballDst).Length))"
+
+    # 4) 两处登记：bundles（列出并启用）+ dependencies（DSH 靠它判定 installed/removable）
     $obj = (Read-Utf8 $pkgJsonPath) | ConvertFrom-Json
+    $changed = $false
     $bundles = @($obj.dsh.profile.bundles)
-    if ($bundles -notcontains $PackageName) {
-        Backup-File $pkgJsonPath
-        $obj.dsh.profile.bundles = $bundles + $PackageName
-        Write-Utf8 $pkgJsonPath ($obj | ConvertTo-Json -Depth 20)
-        Write-Ok "已登记到 dsh.profile.bundles"
+    if ($bundles -notcontains $PackageName) { $obj.dsh.profile.bundles = $bundles + $PackageName; $changed = $true }
+    $spec = "file:../../local-packages/$PackageName-$version.tgz"
+    if (-not $obj.dependencies) {
+        $obj | Add-Member -NotePropertyName 'dependencies' -NotePropertyValue ([pscustomobject]@{}) -Force
+    }
+    if ($obj.dependencies.PSObject.Properties.Name -contains $PackageName) {
+        if ($obj.dependencies.$PackageName -ne $spec) { $obj.dependencies.$PackageName = $spec; $changed = $true }
     } else {
-        Write-Step "dsh.profile.bundles 中已存在，跳过"
+        $obj.dependencies | Add-Member -NotePropertyName $PackageName -NotePropertyValue $spec
+        $changed = $true
+    }
+    if ($changed) {
+        Backup-File $pkgJsonPath
+        Write-Utf8 $pkgJsonPath ($obj | ConvertTo-Json -Depth 20)
+        Write-Ok "已登记 dsh.profile.bundles 与 dependencies（$spec）"
+    } else {
+        Write-Step "profile package.json 里已经是这个版本，跳过登记"
+    }
+
+    # 5) 用 DSH 自带的 pnpm 真装一次
+    $dshPnpm = $null
+    $rtRoot = Join-Path $DshHome 'dsh-runtimes'
+    if (Test-Path -LiteralPath $rtRoot) {
+        foreach ($d in (Get-ChildItem -LiteralPath $rtRoot -Directory -ErrorAction SilentlyContinue | Sort-Object Name)) {
+            $nodeExe = Join-Path $d.FullName 'dependencies\node\bin\node.exe'
+            foreach ($pc in @((Join-Path $d.FullName 'dependencies\pnpm\bin\pnpm.cjs'), (Join-Path $d.FullName 'dependencies\pnpm\dist\pnpm.mjs'))) {
+                if ((Test-Path -LiteralPath $nodeExe) -and (Test-Path -LiteralPath $pc)) {
+                    $dshPnpm = [pscustomobject]@{ Node = $nodeExe; Entry = $pc; Runtime = $d.Name }
+                    break
+                }
+            }
+            if ($dshPnpm) { break }
+        }
+    }
+    if (-not $dshPnpm) {
+        Write-Warn2 "没有找到 DSH 自带的 pnpm，请手工安装依赖（漏了这一步插件不会出现在「插件」页）："
+        Write-Warn2 "  cd `"$ProfileDir`""
+        Write-Warn2 "  pnpm install"
+    } else {
+        Write-Step "正在用 $($dshPnpm.Runtime) 自带的 pnpm 安装依赖..."
+        Push-Location -LiteralPath $ProfileDir
+        try {
+            $prevEap = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
+            try { $out = & $dshPnpm.Node $dshPnpm.Entry install --reporter=append-only 2>&1 } finally { $ErrorActionPreference = $prevEap }
+            $code = $LASTEXITCODE
+        } finally { Pop-Location }
+        $out | ForEach-Object { Write-Step ("  " + $_.ToString().TrimEnd()) }
+        if ($code -eq 0) { Write-Ok "pnpm install 完成" } else { Write-Warn2 "pnpm install 退出码 $code，请手工检查" }
+    }
+
+    # 6) bundle 模式不需要受管块（bundle 自带 cordis.patch.yml），删掉旧的避免重复加载
+    if (Test-Path -LiteralPath $patchPath) {
+        $ptext = Read-Utf8 $patchPath
+        if ($ptext.Contains($BeginMark)) {
+            $ppat = "(?ms)^\s*" + [regex]::Escape($BeginMark) + ".*?" + [regex]::Escape($EndMark) + "\r?\n?"
+            $pnew = ([regex]::Replace($ptext, $ppat, '')).TrimEnd() + [Environment]::NewLine
+            Write-Utf8 $patchPath $pnew
+            Write-Ok "bundle 模式：已移除 cordis.patch.yml 里的受管块（bundle 自带一份，避免重复加载）"
+        }
     }
 }
 

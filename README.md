@@ -18,13 +18,13 @@ docx / xlsx / pptx / pdf  ──▶  MarkItDown（或内置兜底转换器）  �
 
 ## 1. 在新电脑上安装（从打包好的 zip）
 
-把工作区里的 **`dsh-plugin-office-markdown-v1.1.0.zip`** 拷到目标电脑，解压得到 `dsh-plugin-office-markdown\` 目录，然后按下面的方式安装。
+把工作区里的 **`dsh-plugin-office-markdown-v1.1.1.zip`** 拷到目标电脑，解压得到 `dsh-plugin-office-markdown\` 目录，然后按下面的方式安装。
 
 > **先选对安装方式。** 想让插件出现在 DSH 的 **设置 → 插件** 页面里、并且能在那儿**点一下卸载**，就得用 **方式 A** 把它作为 bundle 装进 profile。方式 B / C 只是往 `cordis.patch.yml` 写一段配置 —— 工具、技能、守卫、设置页全都有，但「插件」页不会列出它，因为那一页的数据源只包含 profile 里登记过的 bundle。
 
 ### 方式 A：作为 bundle 安装（推荐 —— 「插件」页能看到、能一键卸载）
 
-需要一个 tarball：就是工作区里的 `dsh-plugin-office-markdown-1.1.0.tgz`。
+需要一个 tarball：就是工作区里的 `dsh-plugin-office-markdown-1.1.1.tgz`。
 
 最省事的做法是让 DSH 自己装：
 
@@ -39,16 +39,22 @@ docx / xlsx / pptx / pdf  ──▶  MarkItDown（或内置兜底转换器）  �
   "dsh": { "profile": { "bundles": [ "……", "dsh-plugin-office-markdown" ] } },
   "dependencies": {
     "……": "……",
-    "dsh-plugin-office-markdown": "file:../../local-packages/dsh-plugin-office-markdown-1.1.0.tgz"
+    "dsh-plugin-office-markdown": "file:../../local-packages/dsh-plugin-office-markdown-1.1.1.tgz"
   }
 }
 ```
 
-> 这样装出来的副本是**真实目录**，不是指向源码的符号链接；改了源码必须重新打包 + 重装才会生效。
+> 这样装出来的副本是**真实目录**，不是指向源码的符号链接。**改了源码必须重新打包 + 重装才会生效**；而且 pnpm 是按「路径 + 版本号」缓存 `file:` 依赖的 —— 内容变了但版本号没变时它会直接复用缓存（安装输出里会写 `reused`），你改了 `lib/` 也不会进到 profile 里。所以**每次改完 `lib/` 都要先把 `package.json` 的 `version` 升一位**，再重新打包、复制、重装。
 
-### 方式 B：一键脚本（只往 `cordis.patch.yml` 写受管块）
+### 方式 B：一键脚本（默认只往 `cordis.patch.yml` 写受管块）
 
 > 这种方式**不会**让插件出现在「插件」页；除此之外功能与方式 A 完全一致。适合不想动 `package.json`、不想跑 pnpm 的场景。
+>
+> **想要「插件」页的卸载按钮，又不想手工装**：加上 `-RegisterBundle`，脚本会替你把方式 A 做完整 —— 打成 tarball 放进 `<DSH 数据目录>\local-packages\`、在 profile `package.json` 里同时登记 `dsh.profile.bundles` 与 `dependencies` 的 `file:` 指向、用 DSH 自带的 pnpm 跑一次 `install`，最后**移除**它先前写的 `cordis.patch.yml` 受管块（bundle 自带一份，留着会被加载两次）。
+>
+> ```powershell
+> & "<解压路径>\dsh-plugin-office-markdown\install.ps1" -RegisterBundle
+> ```
 
 打开 **Windows PowerShell**（不需要管理员权限），执行：
 
