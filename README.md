@@ -350,14 +350,14 @@ read_office_as_markdown({ action: "status" })
 ```
 🐍 Python 环境（pythonPrefer：auto；按此顺序探测，第一个装了 markitdown 的胜出）
   ✅ 使用中  C:\Users\...\dsh-runtimes\dsh-primary-runtime\dependencies\python\python.exe   [DSH 自带运行时]
-  ❌ 未安装  python   [系统 PATH]  ← D:\compilers\python313\python.exe: No module named markitdown
+  ❌ 未安装  python   [系统 PATH]  ← D:\path\to\python.exe: No module named markitdown
   ❌ 未安装  python3   [系统 PATH]  ← Python was not found; ... Microsoft Store ...
-  ❌ 未安装  py   [系统 PATH]  ← D:\compilers\python313\python.exe: No module named markitdown
+  ❌ 未安装  py   [系统 PATH]  ← D:\path\to\python.exe: No module named markitdown
 ```
 
 要固定用某一个，两种办法：
 
-- **精确指定**：`pythonPath: 'D:\compilers\python313\python.exe'` —— 只试这一个，试不通就直接进兜底。
+- **精确指定**：`pythonPath: 'D:\path\to\python.exe'` —— 只试这一个，试不通就直接进兜底。
 - **只换顺序**：`pythonPrefer: bundled`（只用 DSH 自带）/ `system`（系统 PATH 优先于自带）/ `config`（只用 `pythonPath`）。`auto` 是默认。某种模式无法满足时（例如 `config` 但没填 `pythonPath`）会自动退回 `auto`，不会让插件失去解释器。
 
 安装建议：**装到 DSH 自带 Python 最省事**（设置页默认也是往它装），它是默认顺序里的第一优先；只装到系统 Python 也能被找到，但把 `pythonPrefer` 设为 `system`、或用 `pythonPath` 指过去更稳妥。
