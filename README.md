@@ -16,15 +16,34 @@ docx / xlsx / pptx / pdf  ──▶  MarkItDown（或内置兜底转换器）  �
 
 ---
 
-## 1. 在新电脑上安装（从打包好的 zip）
+## 1. 在新电脑上安装
 
-把工作区里的 **`dsh-plugin-office-markdown-v1.1.1.zip`** 拷到目标电脑，解压得到 `dsh-plugin-office-markdown\` 目录，然后按下面的方式安装。
+### 最快：在 DSH 的安装框里填一行
+
+打开 DSH 的 **设置 → 插件 → 安装**，填入下面这行，回车：
+
+```
+github:Z8906/dsh-plugin-office-markdown#v1.1.1
+```
+
+它会作为 bundle 装进 profile —— **设置 → 插件** 里能看到它、也能一键卸载。装完**重启 DSH**。
+
+- 想去掉版本锁定、跟最新主干：`github:Z8906/dsh-plugin-office-markdown`
+- 想装别的历史版本：把 `#v1.1.1` 换成 `#v1.1.0` 或 `#v1.0.0`
+- 这条路**要求目标电脑装了 git**（DSH 安装前会先跑一次 `git ls-remote` 预检），并且仓库是公开的 —— 本仓库两条都满足。
+- 目标电脑**没有 git**？用下面「从打包好的 zip 安装」的三种方式，或者从 [Releases](https://github.com/Z8906/dsh-plugin-office-markdown/releases) 下载 `.tgz`，在安装框里填它的**绝对路径**。
+
+---
+
+### 从打包好的 zip 安装
+
+把 **`dsh-plugin-office-markdown-v1.1.1.zip`** 拷到目标电脑，解压得到 `dsh-plugin-office-markdown\` 目录，然后按下面的方式安装。
 
 > **先选对安装方式。** 想让插件出现在 DSH 的 **设置 → 插件** 页面里、并且能在那儿**点一下卸载**，就得用 **方式 A** 把它作为 bundle 装进 profile。方式 B / C 只是往 `cordis.patch.yml` 写一段配置 —— 工具、技能、守卫、设置页全都有，但「插件」页不会列出它，因为那一页的数据源只包含 profile 里登记过的 bundle。
 
 ### 方式 A：作为 bundle 安装（推荐 —— 「插件」页能看到、能一键卸载）
 
-需要一个 tarball：就是工作区里的 `dsh-plugin-office-markdown-1.1.1.tgz`。
+需要一个 tarball：`dsh-plugin-office-markdown-1.1.1.tgz`（发布包里自带，也可以从 [Releases](https://github.com/Z8906/dsh-plugin-office-markdown/releases) 下载）。
 
 最省事的做法是让 DSH 自己装：
 
@@ -108,14 +127,16 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 ### 方式 D：从 GitHub 克隆（想跟版本 / 自己改）
 
 ```powershell
-git clone https://github.com/<你的账号>/dsh-plugin-office-markdown.git
+git clone https://github.com/Z8906/dsh-plugin-office-markdown.git
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 & ".\dsh-plugin-office-markdown\install.ps1"
 ```
 
-仓库里已经准备好 `.gitignore`（排除 `node_modules/`、`__pycache__/`、`.md-out/`、`*.bak`、`*.bak-*`）和 MIT `LICENSE`：本地 `git init && git add . && git commit -m "init" && git push` 就能直接发布，别人 clone 下来跑上面两条命令即可安装。
+仓库里已经准备好 `.gitignore`（排除 `node_modules/`、`__pycache__/`、`.md-out/`、`*.bak`、`*.bak-*`）和 MIT `LICENSE`。想自己改：fork 一份或直接 clone，改完 `git commit && git push` 就行；别人重新 clone 下来跑上面两条命令即可安装。
 
-> 想让它变成能用 `plugin_manager install_bundle` 一键安装的“市场插件”，需要发布到 npm（`npm publish`），再在 DSH 里 install bundle。不发布也完全能用脚本安装，装完的功能一模一样。
+> **关于「插件市场」**：想让它在 DSH 市场里能被**搜到**，需要往市场的目录清单（[awesome-dsh-plugin.com](https://awesome-dsh-plugin.com/plugins.json)）提一个条目 —— 那是人工维护的清单；发布到 npm 是另一条独立的路。**但「一键安装」本身不需要上架**：上面的 `github:Z8906/dsh-plugin-office-markdown` 就是完整的 bundle 安装，功能和从市场里装的一模一样。
+>
+> 附带一点：用 `github:` 形式装进去的插件，市场**能检测到更新**（拿 lockfile 里的 commit 和仓库远程 HEAD 比对），只是不会自动升级，得你点一下。
 
 ### 安装后必须做的一步
 
