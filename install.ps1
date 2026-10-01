@@ -88,8 +88,11 @@ $RowId = 'office-markdown'
 $BeginMark = "# >>> $PackageName (managed block — keep the markers, edit only the values)"
 $EndMark = "# <<< $PackageName"
 
-# 环境快照由插件宿主半边和本脚本共用，位置固定在用户目录下，不随 profile 变。
-$DshHome = Join-Path $env:USERPROFILE '.dsh'
+# DSH 的数据目录：优先用 DSH 自己导出的 $env:DSH_HOME（数据目录不在默认位置时
+# 这是唯一正确的答案），其次才是默认的 %USERPROFILE%\.dsh。插件宿主半边用
+# lib/paths.js 做同一套回退，两边必须一致，否则会各写一份快照。
+$DshHome = $env:DSH_HOME
+if (-not $DshHome) { $DshHome = Join-Path $env:USERPROFILE '.dsh' }
 $EnvSnapshotName = 'dsh-plugin-office-markdown.env.json'
 
 function Write-Step($msg) { Write-Host "  $msg" -ForegroundColor Cyan }

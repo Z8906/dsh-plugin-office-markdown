@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-office-markdown",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "DeepSeek Harness (dsh) bundle plugin: auto-convert workspace Office / PDF files to Markdown with Microsoft MarkItDown before the model reads them, writing the result next to the source file so only the .md path enters context. Ships a settings page that inspects local Python environments and can install/uninstall MarkItDown on request. Removing the bundle also removes the environment it recorded. Leaves no temp files, no registry and no cache metadata behind.",
   "license": "MIT",
   "type": "module",

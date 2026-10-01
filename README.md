@@ -18,9 +18,37 @@ docx / xlsx / pptx / pdf  ──▶  MarkItDown（或内置兜底转换器）  �
 
 ## 1. 在新电脑上安装（从打包好的 zip）
 
-把工作区里的 **`dsh-plugin-office-markdown-v1.0.0.zip`** 拷到目标电脑，解压得到 `dsh-plugin-office-markdown\` 目录，然后任选一种方式安装。
+把工作区里的 **`dsh-plugin-office-markdown-v1.1.0.zip`** 拷到目标电脑，解压得到 `dsh-plugin-office-markdown\` 目录，然后按下面的方式安装。
 
-### 方式 A：一键脚本（推荐）
+> **先选对安装方式。** 想让插件出现在 DSH 的 **设置 → 插件** 页面里、并且能在那儿**点一下卸载**，就得用 **方式 A** 把它作为 bundle 装进 profile。方式 B / C 只是往 `cordis.patch.yml` 写一段配置 —— 工具、技能、守卫、设置页全都有，但「插件」页不会列出它，因为那一页的数据源只包含 profile 里登记过的 bundle。
+
+### 方式 A：作为 bundle 安装（推荐 —— 「插件」页能看到、能一键卸载）
+
+需要一个 tarball：就是工作区里的 `dsh-plugin-office-markdown-1.1.0.tgz`。
+
+最省事的做法是让 DSH 自己装：
+
+1. 打开 **设置 → 插件**，用安装入口选择这个 `.tgz`（或填它的绝对路径）；
+2. DSH 会把它写进 `<profile>\package.json` 的 `dsh.profile.bundles` 与 `dependencies`（`file:` 指向该 tarball），并自动跑一遍 `pnpm install`；
+3. 重启 DSH。之后 **设置 → 插件** 里就会列出 `dsh-plugin-office-markdown`，带一个卸载按钮。
+
+不想用界面也行，等价的手工做法是：把 tarball 放到固定位置（例如 `%USERPROFILE%\.dsh\local-packages\`），在 `<profile>\package.json` 里改两处，然后在 `<profile>` 目录下执行 `pnpm install`：
+
+```json
+{
+  "dsh": { "profile": { "bundles": [ "……", "dsh-plugin-office-markdown" ] } },
+  "dependencies": {
+    "……": "……",
+    "dsh-plugin-office-markdown": "file:../../local-packages/dsh-plugin-office-markdown-1.1.0.tgz"
+  }
+}
+```
+
+> 这样装出来的副本是**真实目录**，不是指向源码的符号链接；改了源码必须重新打包 + 重装才会生效。
+
+### 方式 B：一键脚本（只往 `cordis.patch.yml` 写受管块）
+
+> 这种方式**不会**让插件出现在「插件」页；除此之外功能与方式 A 完全一致。适合不想动 `package.json`、不想跑 pnpm 的场景。
 
 打开 **Windows PowerShell**（不需要管理员权限），执行：
 
@@ -55,7 +83,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 
 > 直接双击 `.ps1` 或不经 `Set-ExecutionPolicy` 调用会被“禁止运行脚本”拦下；上面的第一行只在当前进程内放开，不改变系统全局策略。
 
-### 方式 B：手动安装（完全不用脚本）
+### 方式 C：手动安装（完全不用脚本）
 
 1. 把整个 `dsh-plugin-office-markdown` 目录复制到：
    `<profile>\node_modules\dsh-plugin-office-markdown`
@@ -71,7 +99,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 
 > 只需追加一份；`cordis.patch.yml` 是顶层 YAML 数组。若脚本已经写过一个受管块，不要再手写第二份。
 
-### 方式 C：从 GitHub 克隆（想跟版本 / 自己改）
+### 方式 D：从 GitHub 克隆（想跟版本 / 自己改）
 
 ```powershell
 git clone https://github.com/<你的账号>/dsh-plugin-office-markdown.git
@@ -124,7 +152,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 | 目标 | 做法 |
 | --- | --- |
 | 临时禁用（等于没装） | DSH 插件管理里关掉 `office-markdown`；或把受管块里 `enabled` 改成 `false` 后重启。**禁用不会卸载任何 Python 包** |
-| 在 DSH 里卸载插件 | 插件管理里移除 `dsh-plugin-office-markdown`。插件在真正被移除时会**自动**把环境记录里属于它的 Python 包 `pip uninstall` 掉 |
+| 在 DSH 里卸载插件（推荐） | DSH **设置 → 插件** 里找到 `dsh-plugin-office-markdown`，点卸载。插件在真正被移除时会**自动**把环境记录里属于它的 Python 包 `pip uninstall` 掉 |
 | 彻底卸载（脚本） | `& "<plugin>\install.ps1" -Uninstall` —— 移除受管块、删除 `node_modules` 副本、清理 `package.json` 登记，**并按环境记录把属于本插件的 Python 包 `pip uninstall` 掉** |
 | 卸载但想留着 markitdown | `& "<plugin>\install.ps1" -Uninstall -KeepMarkitdown` |
 | 彻底卸载（手动） | 删除 `<profile>\node_modules\dsh-plugin-office-markdown`，并删掉 `cordis.patch.yml` 里的受管块。**手工删目录时，如果你想让 markitdown 也一起走，请改用上面的脚本方式**，或先在设置页点「卸载插件配置的环境」 |
@@ -135,12 +163,26 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 
 这是**只在卸载时**发生的行为，关闭 / 禁用 / 重启都不会触发。
 
-DSH 没有给第三方插件留卸载钩子，所以插件在 fiber 被释放后会用双重条件确认自己是否**真的**被移除了：
+DSH 没有给第三方插件留卸载钩子，而 fiber 被释放这件事在**禁用、关闭、重启、热重载**时同样会发生 —— 所以插件必须先判断「这一次到底是不是正在被卸载」，只有确认是，才动手。
 
-1. 自己的包目录 `…/node_modules/dsh-plugin-office-markdown/lib/index.js` 已经不存在；
-2. `~/.dsh/profiles/*/` 下的 `cordis.patch.yml` / `cordis.patch.yaml` / `cordis.yml` / `package.json` 都不再提到 `office-markdown`。
+判定顺序（任一条不满足就直接结束，**不启动任何进程**）：
 
-两条**同时**成立才动手 —— 关掉 DSH、单纯禁用、热重载都只会命中其中一条，因此什么都不会做。宁可漏清理（只是留下包），也不误删（会悄悄破坏你的 Python 环境）。
+1. `removeEnvOnUninstall` 是 `false` → 什么都不做；
+2. 没有环境记录 → 什么都不做；
+3. 记录里没有登记过任何包 → 什么都不做；
+4. 包目录 `…/node_modules/dsh-plugin-office-markdown/lib/index.js` 已经消失，**且** profile 配置里也不再提到它 → 判定为「已被移除」，**当场直接清理**（连进程都不派发）；
+5. **否则，如果 profile 的 `package.json` 里 `dsh.profile.bundles` 仍然列着本插件 → 判定为「只是被禁用 / 关闭 / 重启」，到此结束，不派发任何东西。**
+6. 只有「包目录还在、但 `bundles` 里已经没有它」这一种情况 —— DSH 的卸载流程正好如此：先把 bundle 从 `bundles` 摘掉并 reload，几秒后才删目录 —— 才派发一个**脱离宿主的看门狗进程**，由它轮询等待包目录真正消失，确认后再清理。
+
+所以：**平时关闭 / 重启 DSH 不会有任何常驻进程，也不会有任何 Python 包被卸。**
+
+看门狗自身还有三重保险：
+
+- **单实例锁**：`~/.dsh/dsh-plugin-office-markdown-watchdog.lock`。重复派发的进程发现锁还在，会立刻自我退出（只清掉自己那对临时文件，绝不碰锁）。
+- **寿命上限 120 秒**：前 30 秒每 2 秒查一次，之后每 10 秒查一次，超时就放弃并留日志。实测 `pnpm remove` 只要约 2 秒，所以 120 秒是很宽的余量。
+- **开销近乎为零**：判断「包目录还在不在」只做一次 `stat`，不读任何文件。实测常驻内存约 13 MB、空闲 12 秒内累计 CPU 0.00 ms（低于计时精度）。
+
+日志写在 `~/.dsh/dsh-plugin-office-markdown-removal.log`，事后可以查它做了什么、以及为什么没做。
 
 清理范围严格限定在**环境记录**里：
 
@@ -341,6 +383,7 @@ read_office_as_markdown({ action: "status" })
 | --- | --- |
 | 重启后工具仍不出现 | 看 `<profile>\cordis.patch.yml` 里受管块的 `name` 是否等于 `node_modules` 下的目录名；确认 `node_modules\dsh-plugin-office-markdown\lib\index.js` 存在 |
 | 设置里找不到「Office 转换」 | ① 必须**重启过** DSH —— `dsh.client` 声明只在启动扫描时加载；② 确认 `node_modules\dsh-plugin-office-markdown\lib\client.js` 存在；③ `registerSettings` 是否为 `true`；④ 该 profile 有没有 `webServer`（CLI profile 没有，页面不会出现，工具照常可用） |
+| 「插件」页里看不到本插件 | 只有作为 **bundle** 登记进 profile 的包才会出现在这一页（判据：包名同时出现在 `<profile>\package.json` 的 `dsh.profile.bundles` 和 `dependencies` 里）。只往 `cordis.patch.yml` 写受管块的装法，插件能用、设置页也有，但「插件」页不会列出它。改用 **方式 A** 重装成 bundle 即可（见第 1 节） |
 | 设置页能打开但所有区块都报错 | 客户端走的是 `/office-markdown/api/*`。说明宿主半边没激活，或 `webServer` 路由没注册成功；看 DSH 启动日志里 `office-markdown` 这一条的状态 |
 | 改了 `lib/*.js` 没生效 | DSH 不会重新 import 已缓存的插件模块，**必须重启 DSH**。只改 `lib/client.js` 则由 HMR 热替换，刷新页面即可 |
 | 提示 “spawn uvx ENOENT” / “spawn markitdown ENOENT” | 本机没有 `uv`，`markitdown` 也不在 PATH。**两者都不是必需的**：只要某个 Python 装了 markitdown，就会命中第 3 级 |
@@ -353,7 +396,7 @@ read_office_as_markdown({ action: "status" })
 | `install.ps1` 中文乱码 / 语法报错 | 本文件与脚本均带 UTF-8 BOM，请勿用会去掉 BOM 的编辑器重存 |
 | `install.ps1` 说“没有找到任何 Python 解释器” | 目标电脑还没装 Python。插件仍能用（走 Node 兜底）；装上 Python 后重跑 `& .\install.ps1 -SkipCopy` 就能看到它 |
 | 卸载后 markitdown 还在 | 只有**登记过**的包才会被卸载：用设置页「一键配置」装/登记的（记录里 `added` 的那些），以及 DSH 自带运行时里被自动登记的那一份。你在**别的** Python 环境里自己 `pip install` 的、或者登记之后又手工装到别处的，插件都不会去动。要干净卸载就手工 `pip uninstall markitdown`；如果连环境记录都没写下来，说明当时登记失败了，页面上会有一行「登记失败」的日志 |
-| 卸载插件后 Python 包没被清掉 | 插件只有在**双条件同时成立**时才清理：包目录已删除 **且** profile 配置里不再提到 `office-markdown`。① 如果 `cordis.patch.yml` 里的受管块还在，插件会认为你只是禁用了它，不会动手；② 清理是异步的（释放后 1.5 / 3 / 6 / 12 秒各查一次），如果清理那一刻 DSH 已被强制结束，就来不及执行 —— 此时脚本方式 `install.ps1 -Uninstall` 仍然可用；③ 检查 `removeEnvOnUninstall` 是否被改成了 `false` |
+| 卸载插件后 Python 包没被清掉 | 先看 `~/.dsh/dsh-plugin-office-markdown-removal.log`。① 如果 profile 的 `package.json` 里 `dsh.profile.bundles` 仍列着本插件，插件会认为你只是禁用了它，不会动手；② 如果 120 秒内包目录一直没消失（例如卸载被 pnpm 的其它错误打断），看门狗会超时放弃 —— 此时改用 `install.ps1 -Uninstall` 照样能清；③ 检查 `removeEnvOnUninstall` 是不是被改成了 `false` |
 | 转换出来的 `.md` 会自己消失吗 | **不会，这是设计如此。** 插件只在源文件旁边写这一个 `.md`，不产生任何临时文件，也不删自己的产物。不想留就自己删 |
 
 ---
@@ -370,6 +413,8 @@ dsh-plugin-office-markdown/
     ├── index.js          # 工具 + 技能 + read 守卫的注册（host half）
     ├── convert.js        # 类型判定、转换器探测、转换链（纯 Node 标准库）
     ├── env.js            # Python 环境探测 / 一键配置 / 登记已有环境 / 按记录卸载（host half）
+    ├── paths.js          # DSH 数据目录解析（~/.dsh、profiles、runtimes），带环境变量回退
+    ├── removal-watchdog.js # 卸载看门狗：脱离宿主轮询确认「已被移除」，确认后清 Python 环境
     ├── settings-api.js   # /office-markdown/api/* 路由 + 后台任务状态（host half）
     ├── client.js         # 「Office 转换」设置页（client half，手写、无构建步骤）
     ├── fallback-node.js  # 第 5 级：纯 Node OOXML 兜底（无 Python / 无网络）
@@ -381,6 +426,7 @@ dsh-plugin-office-markdown/
 - 除 `@deepseek-ai/dsh-tools`（由 DSH 自身提供，用于 `defineTool`）外不 import 任何宿主包。
 - `apply()` 的全部注册都包在 `ctx.effect(...)` 里，禁用或卸载时会被干净地回收；`webServer` 是可选服务，通过 `ctx.inject(['webServer'], ...)` 注册路由 —— CLI profile 缺这个服务时，只有设置页不出现，工具与技能照常工作。
 - `client.js` 是手写的 `window.__ModuleLoader__.load({...})` 模块，只用 `require("react")`，不依赖任何 DSH 内部 UI 包，也不依赖任何 CSS 类（样式全内联，明暗主题都能用）。
-- 卸载时的环境清理走 `ctx.effect(() => () => scheduleRemovalCleanup(...))`：释放后按 1.5 / 3 / 6 / 12 秒轮询 `removalConfirmed()`（包目录已消失 **且** profile 配置不再提到 `office-markdown`），首次确认为真才执行 `uninstallMarkitdown()`。定时器全部 `.unref()`，不会拖住进程退出。
+- 卸载时的环境清理走 `ctx.effect(() => () => scheduleRemovalCleanup(...))`：先按第 3 节的判定顺序区分「被卸载」和「被禁用 / 关闭 / 重启」，只有确认是被卸载时才通过 `lib/removal-watchdog.js` 派发一个**脱离宿主的 Python 进程**（`detached` + `unref`，不拖住宿主退出），由它轮询 `removalConfirmed()`（包目录已消失 **且** profile 配置不再提到 `office-markdown`），确认后再执行 `uninstallMarkitdown()`。看门狗带单实例锁（`lib/paths.js` 的 `watchdogLockPath()`）与 120 秒寿命上限。
+- `lib/paths.js` 集中解析 DSH 数据目录，三级回退：`ctx.get('profileContext').dir` 反推（`<home>/profiles/<name>` → `<home>`）→ 环境变量 `DSH_HOME` → `~/.dsh`。所以把 DSH 的数据目录换到别处（或用非默认 profile）也不会找错快照与日志。插件从不引用 DSH 的**安装**目录，换机器、换安装路径都不受影响。
 - 插件运行时在用户目录下最多留**一个**小文件：环境记录 `dsh-plugin-office-markdown.env.json`，只在用设置页配置/登记过环境、或 DSH 自带运行时里已有的 MarkItDown 被自动登记时才存在；一键卸载、卸载插件、`-Uninstall` 时都会删除。除此之外没有任何状态文件 —— 转换产物只有源文件旁边那一个 `.md`。
 - 安装脚本另外会在 `<profile>` 下留 `cordis.patch.yml.bak`（固定文件名，每次覆盖）。它不属于插件运行时，`-Uninstall` 不删它，确认没问题后可自行删除。
