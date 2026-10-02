@@ -161,16 +161,17 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 
 ## 2. 设置页面：Office 转换
 
-在 DSH 的 **设置** 里，左侧多一项 **Office 转换**（`settings.section`，order 450；关闭插件后这一项会一起消失）。页面分四块：
+在 DSH 的 **设置** 里，左侧多一项 **Office 转换**（`settings.section`，order 450；关闭插件后这一项会一起消失）。页面分五块：
 
 | 区块 | 作用 |
 | --- | --- |
 | **当前转换器** | 一眼看出现在用的是 🟢 **本机 MarkItDown**（高保真）还是 🟡 **内置兜底**（保真度有限），并列出完整转换链 |
-| **Python 环境** | 点「检查本机环境」逐个列出候选解释器：路径、来源（DSH 自带 / 系统 PATH）、有没有 `pip`、有没有装 `markitdown`（含版本）、哪个是当前生效的。可用下拉框指定「装到哪一个」 |
+| **Python 环境** | 点「检查本机环境」逐个列出候选解释器：路径、来源（DSH 自带 / 系统 PATH）、有没有 `pip`、有没有装 `markitdown`（含版本）、哪个是当前生效的。可用下拉框指定「装到哪一个」。探测是**并发**做的，每个解释器另有独立超时预算，卡死的会标成「⏱ 未响应」而不是拖住页面；结果按 `probeTtlMs` 缓存，旁边有「重新检查」可强制重探 |
 | **一键配置 MarkItDown 环境** | 对选中的解释器执行 `pip install "markitdown[all]"`。安装**前**记录 `pip freeze`，安装**后**取差集，把「这次新增了哪些包」写进环境记录。**如果这个解释器已经有了 MarkItDown，就跳过安装，直接完成登记。**任务在后台跑，页面实时显示进度日志 |
 | **插件配置的环境** | 显示环境记录（哪个解释器、新增/登记了哪些包、什么时候、是否有包因被运行时共用而保留），以及「卸载插件配置的环境」按钮 —— 只卸载**记录里属于 MarkItDown 的**那些包 |
+| **试转一个文件** | 填一个绝对路径，点「试转」：不进模型、不走缓存，直接在本机跑一遍完整转换链，返回转换器、保真度、体积、行数、tokens、耗时和 500 字预览。用来确认「换了这台机器还好不好使」。产物固定叫 `<文件名>-test.md`，放在源文件旁边（配了 `tmpDir` 就放那里），每次覆盖、不会堆积，也不会被工具误当成缓存结果 |
 
-页面上所有按钮走的是插件自己的 HTTP 路由 `/office-markdown/api/*`（`GET /api/status`、`GET /api/probe`、`GET /api/job`、`POST /api/env/install`、`POST /api/env/uninstall`）。如果所在的 profile 没有 `webServer` 服务（例如纯 CLI），路由不会注册，但工具与技能完全不受影响。
+页面上所有按钮走的是插件自己的 HTTP 路由 `/office-markdown/api/*`（`GET /api/status`、`GET /api/probe`（加 `?force=1` 强制重探）、`GET /api/job`、`POST /api/convert-test`、`POST /api/env/install`、`POST /api/env/uninstall`）。如果所在的 profile 没有 `webServer` 服务（例如纯 CLI），路由不会注册，但工具与技能完全不受影响。
 
 ---
 
@@ -231,7 +232,10 @@ DSH 没有给第三方插件留卸载钩子，而 fiber 被释放这件事在**�
 | 环境记录 | `%USERPROFILE%\.dsh\dsh-plugin-office-markdown.env.json` | 只在**用设置页配置/登记过环境，或 DSH 自带运行时里已经有 MarkItDown 被自动登记**时才存在。点「卸载插件配置的环境」、卸载插件、或 `-Uninstall` / `-Uninstall -KeepMarkitdown` 时删除 |
 | `cordis.patch.yml` 备份 | `<profile>\cordis.patch.yml.bak` | 固定文件名（每次覆盖，**不会随安装次数累积**）；卸载脚本不动它，确认没问题后可自行删除 |
 
-安全边界：插件只**创建**文件，从不批量删除 —— 它连自己写过的 `.md` 都不会去删，更不会碰同目录里任何别的文件。
+安全边界：插件默认只**创建**文件，从不主动删除 —— 它连自己写过的 `.md` 都不会去删，更不会碰同目录里任何别的文件。只有两种「删除」存在，而且都要你明确点头：
+
+- `action: "clean"`：默认 `dryRun: true`，只**列出**会被删的产物；传 `dryRun: false` 才真的删。范围锁死在：同一个目录、文件名匹配 `<原名>-<8位十六进制>.md` 的**普通文件**、且**不是**当前源文件对应的那一份。不递归、不删当前产物、不碰你自己写的 `.md`。
+- `pruneStaleArtifacts: true`（默认 `false`）：每次成功转换后顺手清掉同一源文件的旧产物，范围同上。
 
 ---
 
@@ -241,12 +245,27 @@ DSH 没有给第三方插件留卸载钩子，而 fiber 被释放这件事在**�
 
 | 参数 | 必填 | 说明 |
 | --- | --- | --- |
-| `path` | 否 | 要处理的文件路径（相对工作区或绝对路径）。`action: "status"` 时可省略 |
-| `action` | 否 | `auto`（默认，自动判断类型）/ `convert`（强制转换）/ `read`（读取已转换结果开头）/ `status`（查看可用转换器，并逐个列出每个 Python 环境有没有 markitdown） |
+| `path` | 否 | 文件**或目录**路径（相对工作区或绝对路径）。传目录时会按扩展名找出其中的 Office / PDF 文件。`action: "status"` 时可省略 |
+| `paths` | 否 | 批量处理：多个文件或目录路径（等价于把数组交给 `path`）。一次调用处理多个文件，省掉逐文件来回 |
+| `action` | 否 | `auto`（默认，自动判断类型）/ `convert`（强制转换）/ `read`（读取已转换结果开头）/ `outline`（只给结构索引，**绝不触发转换**）/ `clean`（清理同一源文件的陈旧产物）/ `status`（查看可用转换器，并逐个列出每个 Python 环境有没有 markitdown） |
 | `force` | 否 | `true` 时忽略已有转换结果，重新转换 |
-| `preview` | 否 | 返回 Markdown 开头的字符数（默认 0，只返回路径，最省 token） |
+| `preview` | 否 | 返回 Markdown 开头的字符数（默认 0，只返回路径，最省 token；上限为配置里的 `maxPreviewChars`） |
+| `recursive` | 否 | `path` 是目录时是否递归子目录（默认 `false`）；无论是否递归，一次最多展开 200 个文件 |
+| `dryRun` | 否 | 仅对 `action: "clean"` 有效：`true`（默认）只报告将删除哪些陈旧产物，传 `false` 才真的删除 |
 
-返回值只包含路径、体积、token 估算、转换器与保真度提示，**不会把全文塞进上下文**。模型随后用 `read` 按需读取，建议先读前 100~200 行确认结构，再用 `grep` 定位片段。
+返回值包含路径、体积、**行数**、token 估算、转换器与保真度，外加一份**结构索引**（各章节 / 工作表 / 幻灯片的标题与大致行号），**不会把全文塞进上下文，也绝不会裁剪产物**。同时给出读取策略：先用 `read` 读前 200 行看结构，再用 `grep` 在同一个 `.md` 里定位片段，不要整份读入。
+
+产物第一行会写入一行 HTML 注释，记录它是谁转的（Markdown 渲染时不可见）：
+
+```
+<!-- dsh-office-markdown converter=python-module fidelity=high at=2026-10-01T13:07:38.000Z srcbytes=5462 srchash=c7753efa1a3f81d8 -->
+```
+
+命中缓存时插件就从这一行读回真实的转换器与保真度，而不是无条件声称「保真度高」。由 1.1.x 生成的旧产物没有这一行，会被如实报告为「保真度未知」，想确认就传 `force: true` 重转一次。另外，如果缓存里的产物是**内置兜底**转出来的、而这台机器现在已经有 MarkItDown，插件不会默默复用那份低保真结果，而是重新转换一次并说明原因。
+
+批量处理（`paths` 或目录）时逐文件**串行**转换，避免同时拉起一堆解释器；结果按「一行一个文件」汇总，只有单个文件才给详细输出。
+
+传目录时，返回值总会附带一条「目录展开」说明：是否递归、扫到几个文件、挑出几个 Office / PDF、跳过几个非 Office 文件、有哪些子目录没进去 —— 即使只挑出 1 个文件也会说明，免得「只处理了 1 个文件」被误读成「这个文件夹只有 1 个文件」。
 
 对 `.md` / `.txt` / `.csv` / `.json` 等纯文本，工具会直接告知“无需转换，直接 read 最省 token”（`.csv` 如确需 Markdown 表格，可传 `action: 'convert'`）。
 
@@ -260,7 +279,7 @@ DSH 没有给第三方插件留卸载钩子，而 fiber 被释放这件事在**�
 
 ### `read` 守卫
 
-默认开启：当模型试图用 `read` 直接读取 `.docx/.xlsx/.pptx/.pdf` 等二进制文件时，守卫会拒绝并提示改用 `read_office_as_markdown`。纯文本文件不受影响。设 `guardReadTool: false` 可关闭。
+默认开启：当模型试图用 `read` 直接读取 `.docx/.xlsx/.pptx/.pdf` 等二进制文件时，守卫会拒绝。**如果这个文件其实已经转换过，守卫会直接把那个 `.md` 的绝对路径交给它**，让下一次 `read` 立刻成功，而不是让模型「先去转换一遍」；源文件此后有改动时会说明那是较早的产物。纯文本文件不受影响。设 `guardReadTool: false` 可关闭。
 
 ---
 
@@ -276,7 +295,7 @@ DSH 没有给第三方插件留卸载钩子，而 fiber 被释放这件事在**�
 | 4 | 内置 **Python** 兜底（`lib/fallback.py`） | 有限 | 任意 Python 3；可选 python-docx / openpyxl / python-pptx / pypdf |
 | 5 | 内置 **Node** 兜底（`lib/fallback-node.js`） | 有限 | **无**：只用 Node 内置 `zlib`，不需要 Python，不需要网络 |
 
-第 4、5 级都只在前三级全部不可用时才使用，并且结果文件开头会写明显标注，工具返回里也会说明“保真度有限”，不会假装是高保真转换。
+第 4、5 级都只在前三级全部不可用时才使用，并且结果文件开头会写入 `fidelity=limited` 的标记行，工具返回里也会说明「保真度有限」，不会假装是高保真转换。反过来，如果缓存里那份就是兜底产物、而现在这台机器已经有 MarkItDown，插件会重新转换一次把它升级掉。
 
 ### 没有 Python、没有网络时怎么办
 
@@ -289,7 +308,7 @@ DSH 没有给第三方插件留卸载钩子，而 fiber 被释放这件事在**�
 
 ### 升级到最高保真度：安装 MarkItDown
 
-第 1~3 级才是真正的 MarkItDown。**任意一级可用后插件会自动切过去，不需要改配置，也不需要重启 DSH**；探测结果有 10 分钟缓存，想立刻生效就在设置页点「检查本机环境」，或调用一次工具并传 `action:"status"`（两者都会强制重新探测）。
+第 1~3 级才是真正的 MarkItDown。**任意一级可用后插件会自动切过去，不需要改配置，也不需要重启 DSH**；探测结果有 10 分钟缓存（`probeTtlMs`），想立刻生效就调用一次工具并传 `action:"status"`（强制重探），或在设置页点「重新检查」。
 
 #### 推荐：在设置页一键配置
 
@@ -368,12 +387,37 @@ read_office_as_markdown({ action: "status" })
 
 - 位置：**源文件旁边**（同目录），文件名是 `<原名>-<8 位哈希>.md`。
 - 哈希由 **绝对路径 + 大小 + 修改时间 + 转换参数** 计算，源文件一变就会生成一个新的 `.md`；源文件没变且 `.md` 还在时直接复用（返回里会写“已有转换结果”），传 `force: true` 强制重转。
-- 除了这个 `.md`，插件**不写任何东西**：没有临时目录、没有登记表、没有缓存元数据、没有后台清理任务。转换完成的那一刻，磁盘上的变化就只有多出来的这一个 `.md`。
-- `.md` 归你所有：插件自己不删，也没有 `clean` action 或设置页按钮去删。不想留就自己删，原 Office 文件不受任何影响。
+- **修改时间变了但内容没变**（`git checkout`、复制、从备份还原）时不会白转一遍：每个产物都记录了源文件的字节数与内容哈希，插件比对确认内容相同就复用已有的 `.md`，并把它重新挂到当前缓存键上 —— 于是一个源文件只对应一份产物，不会越攒越多。
+- `.md` 归你所有：插件**默认不删**。要清理同一源文件的历史产物有两个途径：`action: "clean"`（默认 `dryRun: true`，先看会删什么，确认后再传 `dryRun: false`），或把 `pruneStaleArtifacts` 设为 `true` 让每次成功转换顺手清理。两者都只认同一个目录下 `<原名>-<8位十六进制>.md` 这种形态的普通文件，绝不递归、绝不动当前那一份，也不会碰你自己写的 `.md`。
+- 设置页的「试转一个文件」产生的 `<文件名>-test.md` 不参与这套缓存：名字不符合上面的模式，所以它既不会被当成缓存结果，也不会出现在清理列表里。
+- 除了这些 `.md`，插件**不写任何东西**：没有临时目录、没有登记表、没有缓存元数据、没有后台清理任务。转换完成的那一刻，磁盘上的变化就只有多出来的那一个 `.md`。
 - 想让产物集中到某个子目录，把 `tmpDir` 配成一个相对路径（如 `tmpDir: '.md-out'`，相对工作区）或绝对路径即可；留空（默认）就是“和源文件放一起”。
 - 建议把产物文件名模式加进 `.gitignore`（例如 `*-[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f].md`），免得转换结果被提交进仓库。
 
 ---
+
+### 这个插件会留下哪些文件
+
+转换本身是**零残留**的：产物就只有源文件旁边那一个 `.md`（试转时是 `<文件名>-test.md`），
+没有临时目录、没有注册表、没有 sidecar 元数据。已核实插件包目录里不会产生
+`__pycache__` / `.pyc`，工作区里也不会出现任何隐藏目录。
+
+除此之外，只有下面几处文件，都写在 `~/.dsh` 下（Windows 是 `C:\Users\<你>\.dsh`）：
+
+| 文件 | 什么时候产生 | 卸载插件时会怎样 |
+| --- | --- | --- |
+| `dsh-plugin-office-markdown.env.json` | 点过「一键配置」装 MarkItDown 之后 | **自动删除** |
+| `dsh-plugin-office-markdown-removal.log` | 每次在 DSH 里卸载本插件时追加一段 | 保留（它正是卸载过程的记录） |
+
+关于 `removal.log`：卸载插件时，插件的代码会先被 DSH 销毁、包目录过几秒才被删掉，
+中间你若重启一次 harness，宿主里的定时器就全没了 ——
+所以插件在销毁前会派一个**脱离 DSH 的进程**去等，等到确认插件真的被移除，再执行 `pip uninstall`。
+那个进程的输出是丢弃的，它每一步都写进这个日志文件，因此它是**唯一**能证明某次卸载到底干了什么的东西。
+日志超过 64 KB 时会在写入前自动裁剪，只保留最近约 16 KB，不会无限增长。想清空直接删掉这个文件即可。
+
+另外，`pip install` 会往 pip 自己的缓存目录里留 wheel（通常
+`%LOCALAPPDATA%\pip\cache`，本机实测约 120 MB）。它属于 pip 而非本插件，
+卸载本插件不会清它，想清就执行 `pip cache purge`。
 
 ## 7. 配置项
 
@@ -393,6 +437,7 @@ read_office_as_markdown({ action: "status" })
 | `probeTtlMs` | `600000` | 转换器探测结果缓存时长（毫秒） |
 | `timeoutMs` | `300000` | 单个转换子进程超时 |
 | `reuseFresh` | `true` | 复用未过期的转换结果 |
+| `pruneStaleArtifacts` | `false` | 每次成功转换后顺手清掉**同一源文件**的陈旧产物（只匹配 `<原名>-<8位十六进制>.md`、只删非当前那一份、绝不递归）。默认关闭；也可以随时用 `action: "clean"` 手动清 |
 | `maxPreviewChars` | `4000` | `preview` 参数上限 |
 | `maxRowsPerSheet` | `400` | 每个工作表/表格最多输出行数 |
 | `maxTableCols` | `24` | 表格最多输出列数 |
@@ -424,7 +469,9 @@ read_office_as_markdown({ action: "status" })
 | `install.ps1` 说“没有找到任何 Python 解释器” | 目标电脑还没装 Python。插件仍能用（走 Node 兜底）；装上 Python 后重跑 `& .\install.ps1 -SkipCopy` 就能看到它 |
 | 卸载后 markitdown 还在 | 只有**登记过**的包才会被卸载：用设置页「一键配置」装/登记的（记录里 `added` 的那些），以及 DSH 自带运行时里被自动登记的那一份。你在**别的** Python 环境里自己 `pip install` 的、或者登记之后又手工装到别处的，插件都不会去动。要干净卸载就手工 `pip uninstall markitdown`；如果连环境记录都没写下来，说明当时登记失败了，页面上会有一行「登记失败」的日志 |
 | 卸载插件后 Python 包没被清掉 | 先看 `~/.dsh/dsh-plugin-office-markdown-removal.log`。① 如果 profile 的 `package.json` 里 `dsh.profile.bundles` 仍列着本插件，插件会认为你只是禁用了它，不会动手；② 如果 120 秒内包目录一直没消失（例如卸载被 pnpm 的其它错误打断），看门狗会超时放弃 —— 此时改用 `install.ps1 -Uninstall` 照样能清；③ 检查 `removeEnvOnUninstall` 是不是被改成了 `false` |
-| 转换出来的 `.md` 会自己消失吗 | **不会，这是设计如此。** 插件只在源文件旁边写这一个 `.md`，不产生任何临时文件，也不删自己的产物。不想留就自己删 |
+| 转换出来的 `.md` 越来越多 | 每个不同的「大小 + 修改时间 + 配置」都对应一份产物。用 `read_office_as_markdown({ path: "报表.xlsx", action: "clean" })` 先看会删哪些（默认 `dryRun`），确认后再传 `dryRun: false`；或把 `pruneStaleArtifacts` 设为 `true` 让每次成功转换顺手清理。源文件内容没变、只是修改时间变了（例如 `git checkout`）时，插件会比对内容哈希后复用旧产物并重新挂到当前缓存键上，不会再写重复文件 |
+| 返回值里保真度显示「未知」 | 那份 `.md` 是 1.1.x 生成的，第一行没有转换器标记。传 `force: true` 重转一次就会补上，转换器本身没有问题 |
+| 转换出来的 `.md` 会自己消失吗 | **不会，这是设计如此。** 插件只在源文件旁边写 `.md`，不产生任何临时文件，也不会自动删自己的产物 —— 只有你显式用 `action: "clean"`（且传了 `dryRun: false`）或把 `pruneStaleArtifacts` 设为 `true`，才会删除 |
 
 ---
 
@@ -436,6 +483,8 @@ dsh-plugin-office-markdown/
 ├── cordis.patch.yml      # 供 bundle 方式安装时使用的 insert 条目
 ├── install.ps1           # 安装 / 卸载 脚本（含备份与受管块）
 ├── README.md             # 本文件
+├── CHANGELOG.md          # 版本更新日志（在 files 白名单之外，不进 .tgz）
+├── .github/workflows/    # CI（语法 / 版本号 / 打包结构）与发布（推 v* tag 自动建 Release）
 └── lib/
     ├── index.js          # 工具 + 技能 + read 守卫的注册（host half）
     ├── convert.js        # 类型判定、转换器探测、转换链（纯 Node 标准库）
@@ -448,7 +497,7 @@ dsh-plugin-office-markdown/
     └── fallback.py       # 第 4 级：Python 兜底（docx/xlsx/pptx/pdf/csv/rtf/json…）
 ```
 
-- Node：仅使用内置模块（`fs`/`path`/`os`/`zlib`/`crypto`/`child_process`），**没有任何 npm 依赖**，不需要 `npm install`。
+- Node：仅使用内置模块（`fs`/`path`/`os`/`zlib`/`crypto`/`child_process`/`string_decoder`），**没有任何 npm 依赖**，不需要 `npm install`。
 - Python 兜底：只用标准库 + 可选 `python-docx` / `openpyxl` / `python-pptx` / `pypdf`。
 - 除 `@deepseek-ai/dsh-tools`（由 DSH 自身提供，用于 `defineTool`）外不 import 任何宿主包。
 - `apply()` 的全部注册都包在 `ctx.effect(...)` 里，禁用或卸载时会被干净地回收；`webServer` 是可选服务，通过 `ctx.inject(['webServer'], ...)` 注册路由 —— CLI profile 缺这个服务时，只有设置页不出现，工具与技能照常工作。

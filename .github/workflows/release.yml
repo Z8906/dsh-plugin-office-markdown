@@ -1,0 +1,67 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 校验 tag 与 package.json 版本号
+        run: |
+          node -e '
+            const pkg = require("./package.json");
+            const tag = process.env.GITHUB_REF_NAME.replace(/^v/, "");
+            if (pkg.version !== tag) {
+              console.error("版本不一致：package.json " + pkg.version + " vs tag " + tag);
+              process.exit(1);
+            }
+          '
+
+      - name: 从 CHANGELOG.md 提取本版本说明
+        run: |
+          node -e '
+            const fs = require("fs");
+            const tag = process.env.GITHUB_REF_NAME.replace(/^v/, "");
+            const lines = fs.readFileSync("CHANGELOG.md", "utf8").replace(/\r\n/g, "\n").split("\n");
+            const start = lines.findIndex((l) => l.startsWith("## [" + tag + "]"));
+            if (start < 0) {
+              console.error("CHANGELOG.md 里没有 " + tag + " 一节");
+              process.exit(1);
+            }
+            let end = lines.length;
+            for (let i = start + 1; i < lines.length; i += 1) {
+              if (/^## \[/.test(lines[i])) { end = i; break; }
+            }
+            const notes = lines.slice(start + 1, end).join("\n").trim();
+            if (!notes) {
+              console.error("CHANGELOG.md 的 " + tag + " 一节是空的");
+              process.exit(1);
+            }
+            fs.writeFileSync("release-notes.md", notes + "\n");
+          '
+
+      - name: 打包
+        run: npm pack
+
+      - name: 创建 Release 并上传 .tgz
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          ls -1 ./*.tgz
+          # --notes-file 而不是 --notes：说明里的中文要按 UTF-8 原样写入。
+          gh release create "$GITHUB_REF_NAME" \
+            --title "$GITHUB_REF_NAME" \
+            --notes-file release-notes.md \
+            ./*.tgz

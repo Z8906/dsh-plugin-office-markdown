@@ -1,4 +1,4 @@
-﻿#Requires -Version 5.1
+#Requires -Version 5.1
 <#
 .SYNOPSIS
     安装 / 卸载 dsh-plugin-office-markdown 到指定的 DSH profile。
@@ -328,6 +328,7 @@ if ($SkipEnv) {
     Write-Host ""
     Write-Step "本脚本不安装 markitdown。要装请重启 DSH 后打开："
     Write-Step "  设置 → Office 转换 → 检查本机环境 → 选解释器 → 一键配置 MarkItDown 环境"
+    Write-Step "  装完可以在同一页面的「试转一个文件」里确认转换链真的可用。"
     Write-Step "想固定用某一个解释器，在同一个页面或 cordis.patch.yml 里设置 pythonPath。"
 }
 
@@ -351,6 +352,7 @@ $BeginMark
         probeTtlMs: 600000
         timeoutMs: 300000
         reuseFresh: true
+        pruneStaleArtifacts: false
         maxPreviewChars: 4000
         maxRowsPerSheet: 400
         maxTableCols: 24

@@ -5,3 +5,5 @@ __pycache__/
 .md-out/
 *.bak
 *.bak-*
+*.tgz
+*.zip

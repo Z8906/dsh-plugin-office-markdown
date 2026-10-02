@@ -24,6 +24,7 @@
         probeTtlMs: 600000
         timeoutMs: 300000
         reuseFresh: true
+        pruneStaleArtifacts: false
         maxPreviewChars: 4000
         maxRowsPerSheet: 400
         maxTableCols: 24

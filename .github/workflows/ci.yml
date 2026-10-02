@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 语法检查（宿主半边）
+        run: |
+          set -e
+          for f in lib/convert.js lib/index.js lib/env.js lib/settings-api.js lib/paths.js lib/removal-watchdog.js; do
+            node --check "$f"
+            echo "ok   $f"
+          done
+
+      - name: 语法检查（客户端半边）
+        run: node --check lib/client.js
+
+      - name: tag 与 package.json 版本号必须一致
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          node -e '
+            const pkg = require("./package.json");
+            const tag = process.env.GITHUB_REF_NAME.replace(/^v/, "");
+            if (pkg.version !== tag) {
+              console.error("package.json 版本 " + pkg.version + " 与 tag " + tag + " 不一致");
+              process.exit(1);
+            }
+            console.log("版本一致：" + tag);
+          '
+
+      - name: 打包顶层目录必须是 package/
+        run: |
+          set -e
+          npm pack --silent >/dev/null
+          TARBALL=$(ls -1 *.tgz | head -n1)
+          echo "tarball: $TARBALL"
+          tar -tzf "$TARBALL" | head -n 10
+          tar -tzf "$TARBALL" | grep -q '^package/' || { echo "::error::tgz 顶层目录不是 package/，DSH 无法安装"; exit 1; }
+          tar -tzf "$TARBALL" | grep -q '^package/package.json$' || { echo "::error::缺少 package/package.json"; exit 1; }
+          tar -tzf "$TARBALL" | grep -q '^package/cordis.patch.yml$' || { echo "::error::缺少 package/cordis.patch.yml"; exit 1; }
+          tar -tzf "$TARBALL" | grep -q '^package/lib/index.js$' || { echo "::error::缺少 package/lib/index.js"; exit 1; }
+          tar -tzf "$TARBALL" | grep -q '^package/lib/client.js$' || { echo "::error::缺少 package/lib/client.js"; exit 1; }
+          tar -tzf "$TARBALL" | grep -q '^package/lib/env.js$' || { echo "::error::缺少 package/lib/env.js"; exit 1; }
+          tar -tzf "$TARBALL" | grep -q '^package/lib/settings-api.js$' || { echo "::error::缺少 package/lib/settings-api.js"; exit 1; }
+          echo "打包结构检查通过"
