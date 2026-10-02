@@ -61,9 +61,11 @@ package.json
 2. 在 `CHANGELOG.md` 顶部加一节，标题格式为 `## [<版本>] - <日期>`。
    `.github/workflows/release.yml` 用它来生成 Release 说明：从 `## [<tag>]` 那一行开始取，
    到下一个 `## [` 开头的行为止，所以版本标题的格式不能改。
-3. 提交并打 tag：`git tag v<版本>`，推 tag。
+3. 提交并打 tag：`git tag -a v<版本> -m "v<版本>"`，然后推 tag。
+   用**附注标签**（`-a`），与仓库里已有的 5 个 tag 保持一致；`git tag v<版本>`（不带 `-a`）造出的是轻量标签。
 4. `release.yml` 在 tag 上触发：打包 `.tgz`，用 `gh release create` 建 Release 并附上说明与 tarball。
    `ci.yml` 负责常规检查。
+   注意：**强制更新一个已存在的 tag 不会触发 `release.yml`** —— 只有新增 tag 才会。
 
 ### 发版检查清单
 
