@@ -1,78 +1,66 @@
 # 配置
 
-[← 返回首页](../README.md) ｜ [转换器](converters.md) · [产物与文件](artifacts.md) · [卸载](uninstall.md)
+[← 回到 README](../README.md)
 
-写在 `cordis.patch.yml` 受管块的 `config:` 下（也可通过 DSH 插件管理的配置界面改）。
+下表对照 `lib/index.js` 里的 `DEFAULTS`（21 个键）。插件读取配置时做的是
+`{ ...DEFAULTS, ...config }`，所以没写的键一律用默认值。
+
+| 配置项 | 类型 | 默认值 | 作用 |
+| --- | --- | --- | --- |
+| `enabled` | 布尔 | `true` | 总开关 |
+| `tmpDir` | 字符串 | `''` | 产物目录；留空表示写在源文件旁边 |
+| `converter` | 字符串 | `'auto'` | 指定转换器，见下方取值 |
+| `pythonPath` | 字符串 | `''` | 固定使用某个 Python 解释器 |
+| `pythonPrefer` | 字符串 | `'auto'` | Python 探测顺序，见下方取值 |
+| `allowUvxDownload` | 布尔 | `true` | 允许用 `uvx` 临时拉取 markitdown |
+| `uvxExtras` | 字符串 | `'markitdown[all]'` | `uvx` 拉取时带的 extras |
+| `fallbackEnabled` | 布尔 | `true` | 允许使用内置兜底转换器 |
+| `guardReadTool` | 布尔 | `true` | 拦截直接用 `read` 读二进制 Office / PDF |
+| `probeTtlMs` | 数字 | `600000` | 环境探测结果的缓存时长（毫秒） |
+| `timeoutMs` | 数字 | `300000` | 单次转换超时（毫秒） |
+| `reuseFresh` | 布尔 | `true` | 源文件没变时复用已有产物 |
+| `maxPreviewChars` | 数字 | `4000` | `preview` 返回的最大字符数 |
+| `maxRowsPerSheet` | 数字 | `400` | 表格类产物每张工作表最多输出多少行 |
+| `maxTableCols` | 数字 | `24` | 每行最多多少列 |
+| `maxCellsPerSheet` | 数字 | `20000` | 每张工作表最多多少单元格 |
+| `pruneStaleArtifacts` | 布尔 | `false` | 每次转换后顺手清理同一源文件的陈旧产物 |
+| `registerSkill` | 布尔 | `true` | 注册技能 |
+| `registerSettings` | 布尔 | `true` | 注册设置页与 HTTP 路由 |
+| `autoAdoptEnv` | 布尔 | `true` | 启动时自动认领已存在的 markitdown 环境 |
+| `removeEnvOnUninstall` | 布尔 | `true` | 真正被卸载时清理插件登记过的 Python 包 |
+
+## `converter` 的取值
+
+| 值 | 含义 |
+| --- | --- |
+| `auto` | 默认。按顺序探测，第一个可用的胜出 |
+| `uvx` | `uvx markitdown`，临时运行，不需要永久安装 |
+| `markitdown-cli` | 本机的 `markitdown` 命令 |
+| `python-module` | `python -m markitdown` |
+| `builtin` | 插件内置 Python 兜底转换器 |
+| `node-builtin` | 插件内置 Node 兜底转换器（不需要 Python 与网络） |
+
+这些取值来自 `lib/convert.js` 的 `CONVERTER_LABELS`；填了别的值不会生效，
+会退回自动探测。转换器链的细节见 [转换器文档](converters.md)。
+
+## `pythonPrefer` 的取值
+
+来自 `lib/convert.js` 的 `PYTHON_PREFERS`：`auto` / `bundled` / `system` / `config`。
+
+- `auto` —— 默认，综合判断。
+- `bundled` —— 优先用 DSH 运行时自带的解释器。
+- `system` —— 优先用系统里的 Python。
+- `config` —— 只用 `pythonPath` 指定的那个。
+
+填了列表以外的值会退回 `auto`；`bundled` 找不到自带解释器、或 `config` 没配
+`pythonPath` 时，同样退回 `auto`。
+
+## 关于「常用组合」
+
+这里原先列过几组推荐配置，但那些组合**没有经过验证**，已经删掉。
+需要调整时请对照上表的默认值逐项改，改完用设置页的「试转一个文件」实际跑一遍看结果。
 
 ---
 
-## 全部配置项
-
-| 键 | 默认 | 说明 |
-| --- | --- | --- |
-| `enabled` | `true` | `false` 时完全等价于未安装（工具 / 技能 / 守卫 / 设置页全都不注册） |
-| `tmpDir` | `''` | 转换结果目录。**留空 = 与源文件同目录**（默认）；也可填相对工作区的路径（如 `.md-out`）或绝对路径 |
-| `converter` | `auto` | `auto` 或指定 `uvx` / `markitdown-cli` / `python-module` / `builtin` / `node-builtin` |
-| `pythonPath` | `''` | 指定 Python 解释器绝对路径，命中后**只**试它；留空则自动发现 |
-| `pythonPrefer` | `auto` | Python 探测顺序：`auto`（配置 → DSH 自带运行时 → 系统 PATH）/ `bundled`（只用 DSH 自带）/ `system`（系统 PATH 优先）/ `config`（只用 `pythonPath`）。无法满足时自动退回 `auto` |
-| `allowUvxDownload` | `true` | 允许 `uvx` 首次下载 markitdown |
-| `uvxExtras` | `markitdown[all]` | `uvx --from` 使用的包规格 |
-| `fallbackEnabled` | `true` | 允许第 4、5 级内置兜底 |
-| `guardReadTool` | `true` | 拦截对二进制 Office 文件的直接 `read` |
-| `probeTtlMs` | `600000` | 转换器探测结果缓存时长（毫秒） |
-| `timeoutMs` | `300000` | 单个转换子进程超时 |
-| `reuseFresh` | `true` | 复用未过期的转换结果 |
-| `pruneStaleArtifacts` | `false` | 每次成功转换后顺手清掉**同一源文件**的陈旧产物（只匹配 `<原名>-<8位十六进制>.md`、只删非当前那一份、绝不递归）。默认关闭；也可以随时用 `action: "clean"` 手动清 |
-| `maxPreviewChars` | `4000` | `preview` 参数上限 |
-| `maxRowsPerSheet` | `400` | 每个工作表 / 表格最多输出行数 |
-| `maxTableCols` | `24` | 表格最多输出列数 |
-| `maxCellsPerSheet` | `20000` | 每个工作表最多导出单元格数 |
-| `registerSkill` | `true` | 是否注册那份技能说明 |
-| `registerSettings` | `true` | 是否注册「Office 转换」设置页 |
-| `autoAdoptEnv` | `true` | 启动时如果发现 **DSH 自带运行时**的解释器里已经有 MarkItDown，就自动登记它，以便卸载插件时一并清理。用户自己的 Python 不会被自动登记 |
-| `removeEnvOnUninstall` | `true` | 在 DSH 里卸载本插件时，是否自动 `pip uninstall` 环境记录里的包。设为 `false` 则只删记录文件、不碰 Python 环境。**这个开关只在真正卸载插件时生效，禁用 / 关闭 / 重启都不受影响** |
-
----
-
-## 常用组合
-
-**只想省 token，不装任何东西**（默认配置就是）：`converter: auto` + `fallbackEnabled: true` —— 有 MarkItDown 就用，没有就走内置兜底。
-
-**完全离线、绝不联网**：
-
-```yaml
-config:
-  enabled: true
-  allowUvxDownload: false     # 不下载 uvx
-  converter: node-builtin     # 只用随包兜底
-```
-
-**产物集中管理**：
-
-```yaml
-config:
-  enabled: true
-  tmpDir: '.md-out'           # 相对工作区；产物不再散落在源文件旁边
-  pruneStaleArtifacts: true   # 每次转换顺手清掉同一源文件的旧产物
-```
-
-> 换成 `tmpDir` 之后，之前生成在源文件旁边的 `.md` 不会被自动迁移或删除 —— 日志里会标注旧路径，需要的话手工清理。
-
-**严格只读、不碰工作区**：把 `guardReadTool` 保持 `true`，并给产物指定一个统一目录（上面的 `tmpDir`），再配合工作区的 `.gitignore`。
-
-**固定用系统 Python**：
-
-```yaml
-config:
-  enabled: true
-  pythonPrefer: system
-```
-
-**不想让插件碰 Python 环境**：
-
-```yaml
-config:
-  enabled: true
-  autoAdoptEnv: false
-  removeEnvOnUninstall: false
-```
+> 本文档主要由 AI 生成，配置项与默认值逐项对照过 `lib/index.js` 的 `DEFAULTS`。
+> 说明与免责见 [README 的「关于本文档」](../README.md#关于本文档)。

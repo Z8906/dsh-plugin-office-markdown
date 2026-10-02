@@ -7,6 +7,7 @@
 - 推 `v*` tag 时，`.github/workflows/release.yml` 会从本文件提取对应小节并作为 GitHub Release 的说明，因此请**保留 `## [x.y.z]` 这一标题写法**，也不要修改已发布版本的标题。
 - 本文件**不随 `.tgz` 发布**（`package.json` 的 `files` 白名单里没有它），只存在于仓库中。
 - 分类沿用 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)：`Added` / `Changed` / `Fixed` / `Breaking Changes` / `Known Issues`。
+- 本文件**主要由 AI 生成**（逐项对照源码与 git tag 写成），经维护者审阅后发布；如与实现有出入，**请以代码为准**。说明见 [README 的「关于本文档」](README.md#关于本文档)。
 
 ## 版本一览
 
