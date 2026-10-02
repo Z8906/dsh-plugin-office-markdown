@@ -77,11 +77,16 @@ github:Z8906/dsh-plugin-office-markdown#v1.2.0
 }
 ```
 
-> **`.tgz` 里有什么**：`package.json`、`cordis.patch.yml`、`README.md`、`LICENSE`、`lib/`（9 个文件）。它**不含 `install.ps1`**，也不含 `CHANGELOG.md` 和 `.github/`（这三者不在 `package.json` 的 `files` 白名单里）。
+> **`.tgz` 里有什么**：`package.json`、`cordis.patch.yml`、`README.md`、`LICENSE`、`lib/`（9 个文件）。它**不含 `install.ps1`**，也不含 `CHANGELOG.md` 和 `.github/`（这三者不在 `package.json` 的 `files` 白名单里）—— 需要 `install.ps1` 请走方式 3（`.zip` 源码快照或 `git clone`）。
 >
 > **`file:` 依赖的缓存规则**：pnpm 按「路径 + 版本号」缓存 `file:` 依赖 —— 内容变了但版本号没变时会直接复用缓存（安装输出里写 `reused`）。所以改完 `lib/` 必须先把 `package.json` 的 `version` 升一位，再重新打包、复制、重装。
 
 ### 方式 3：源码 + `install.ps1`（需要脚本时用这条）
+
+拿到源码有两条路，`install.ps1` 只存在于源码里（`.tgz` 不含它）：
+
+- 从 [Releases](https://github.com/Z8906/dsh-plugin-office-markdown/releases) 下载 `dsh-plugin-office-markdown-v<版本>.zip` —— 源码快照，**内含 `install.ps1`**，解压后就是 `dsh-plugin-office-markdown-<版本>\` 目录，**不需要 git**；
+- 或 `git clone` 本仓库（含全部历史）：
 
 ```powershell
 git clone https://github.com/Z8906/dsh-plugin-office-markdown.git
@@ -455,7 +460,7 @@ read_office_as_markdown({ action: "status" })
 | PDF 转换失败 | Node 兜底不支持 PDF；需要 MarkItDown 或带 pypdf 的 Python 兜底 |
 | 设置页一键配置很慢 / 失败 | `markitdown[all]` 约 90 MB，需要联网。失败时页面任务日志里有 pip 的最后几行错误；也可手动重试：`& "<python>" -m pip install "markitdown[all]"` |
 | 想彻底关闭 | 受管块 `enabled: false` 后重启，或 DSH 插件管理里禁用 |
-| 从 Releases 下的 `.tgz` 里找不到 `install.ps1` | 这是正常的：`.tgz` 是 npm 包结构，只含 `lib/`、`cordis.patch.yml`、`README.md`、`package.json`、`LICENSE`。需要脚本请 `git clone`（方式 3） |
+| 从 Releases 下的 `.tgz` 里找不到 `install.ps1` | 这是正常的：`.tgz` 是 npm 包结构，只含 `lib/`、`cordis.patch.yml`、`README.md`、`package.json`、`LICENSE`。**要脚本请改用方式 3**：同一页的 `.zip` 源码快照里有 `install.ps1`（不必装 git），也可以 `git clone` |
 | `install.ps1` 报"禁止运行脚本" | 先执行 `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force` |
 | `install.ps1` 中文乱码 / 语法报错 | 脚本与 README 均以 **UTF-8（无 BOM）** 保存；请勿另存为 ANSI / GBK，否则脚本里的中文提示会变乱码 |
 | `install.ps1` 说"没有找到任何 Python 解释器" | 目标电脑还没装 Python。插件仍能用（走 Node 兜底）；装上 Python 后重跑 `& .\install.ps1 -SkipCopy` 就能看到它 |
@@ -500,7 +505,7 @@ dsh-plugin-office-markdown/
 ├── cordis.patch.yml      # 供 bundle 方式安装时使用的 insert 条目
 ├── README.md             # 本文件
 ├── LICENSE               # MIT
-├── install.ps1           # 安装 / 卸载脚本（不进 .tgz，需要它请 git clone）
+├── install.ps1           # 安装 / 卸载脚本（不进 .tgz；Releases 的 .zip 源码快照里有）
 ├── CHANGELOG.md          # 版本更新日志（不进 .tgz）
 ├── .github/workflows/    # CI（语法 / 版本号 / 打包结构）与发布（推 v* tag 自动建 Release，不进 .tgz）
 └── lib/                  # 全部随 .tgz 发布（9 个文件）
