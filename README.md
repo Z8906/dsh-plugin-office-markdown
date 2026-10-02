@@ -528,7 +528,7 @@ dsh-plugin-office-markdown/
 
 ## 13. 开发与贡献
 
-本项目**主要由 DeepSeek 开发**：代码、文档与发布脚本由 DeepSeek Harness 内置的 AI 编码代理编写，人类维护者提出需求、验收行为、决定发布。
+本项目**主要由 DeepSeek 开发**。
 
 - 想改代码：fork 或 `git clone`，改完 `git commit && git push`；别人重新 clone 下来跑 `install.ps1` 即可安装。
 - 改了 `lib/*.js` 必须重启 DSH 才生效；改了 `lib/client.js` 可热替换。
