@@ -199,8 +199,9 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 | --- | --- |
 | 临时禁用（等于没装） | DSH 插件管理里关掉 `office-markdown`；或把受管块里 `enabled` 改成 `false` 后重启。**禁用不会卸载任何 Python 包** |
 | 在 DSH 里卸载插件（推荐） | DSH **设置 → 插件** 里找到它，点卸载。插件在真正被移除时会**自动**把环境记录里属于它的 Python 包 `pip uninstall` 掉 |
-| 彻底卸载（脚本） | `& "<plugin>\install.ps1" -Uninstall` —— 移除受管块、删除 `node_modules` 副本、清理 `package.json` 登记，**并按环境记录卸载属于本插件的 Python 包** |
+| 彻底卸载（脚本） | `& "<plugin>\install.ps1" -Uninstall` —— 移除受管块、删除 `node_modules` 副本、清理 `package.json` 登记、删除卸载日志，**并按环境记录卸载属于本插件的 Python 包** |
 | 卸载但想留着 markitdown | `& "<plugin>\install.ps1" -Uninstall -KeepMarkitdown` |
+| 卸载但想留着卸载日志 | `& "<plugin>\install.ps1" -Uninstall -KeepRemovalLog` |
 | 彻底卸载（手动） | 删除 `<profile>\node_modules\dsh-plugin-office-markdown` 并删掉受管块。**手工删目录不会清理 Python 包**；想一起清，请改用脚本，或先在设置页点「卸载插件配置的环境」 |
 
 `apply()` 在看到 `config.enabled === false` 时**直接返回、不注册任何东西** —— 工具、技能、`read` 守卫、设置页都不会出现，和没装完全一致。
@@ -228,7 +229,7 @@ DSH 没有给第三方插件留卸载钩子，而 fiber 被释放这件事在**�
 - **寿命上限 120 秒**：前 30 秒每 2 秒查一次，之后每 10 秒查一次，超时放弃并留日志。实测 `pnpm remove` 只要约 2 秒，余量很宽。
 - **开销近乎为零**：判断「包目录还在不在」只做一次 `stat`，不读任何文件。实测常驻内存约 13 MB、空闲 12 秒内累计 CPU 0.00 ms。
 
-日志写在 `~/.dsh/dsh-plugin-office-markdown-removal.log`，事后可以查它做了什么、以及为什么没做。
+日志写在 `~/.dsh/dsh-plugin-office-markdown-removal.log`：**清理成功只留一行摘要**，失败 / 超时 / 未确认才保留完整转录（见下面「这个插件会留下哪些文件」）。
 
 清理范围严格限定在**环境记录**里：
 
@@ -403,13 +404,21 @@ read_office_as_markdown({ action: "status" })
 | --- | --- | --- |
 | `<源文件>-<8位哈希>.md` | 每次转换 | **保留**（归你所有，插件不删） |
 | `dsh-plugin-office-markdown.env.json` | 点过「一键配置」装 / 登记 MarkItDown 之后 | **自动删除** |
-| `dsh-plugin-office-markdown-removal.log` | 每次在 DSH 里卸载本插件时追加一段 | 保留（它正是卸载过程的记录） |
+| `dsh-plugin-office-markdown-removal.log` | 每次在 DSH 里卸载本插件时写一段 | 清理成功时只剩一行摘要；失败 / 超时保留完整记录 |
 | `<profile>\cordis.patch.yml.bak` | 用 `install.ps1` 写入受管块前 | 保留（不属于插件运行时，确认没问题可自行删除） |
 | `~/.dsh/dsh-plugin-office-markdown-watchdog.lock` | 看门狗运行期间（单实例锁） | 看门狗退出时自动删除 |
 
-关于 `removal.log`：卸载插件时，插件的代码会先被 DSH 销毁、包目录过几秒才被删掉，中间若重启一次 harness，宿主里的定时器就全没了 —— 所以插件在销毁前会派一个**脱离 DSH 的进程**去等，确认插件真的被移除后再执行 `pip uninstall`。那个进程的输出被丢弃，每一步都写进这个日志，因此它是**唯一**能证明某次卸载到底干了什么的东西。
+关于 `removal.log`：卸载插件时，插件的代码会先被 DSH 销毁、包目录过几秒才被删掉，中间若重启一次 harness，宿主里的定时器就全没了 —— 所以插件在销毁前会派一个**脱离 DSH 的进程**去等，确认插件真的被移除后再执行 `pip uninstall`。那个进程的输出被丢弃，每一步都写进这个日志。
 
-> 日志超过 64 KB 时会在写入前自动裁剪，只保留最近约 16 KB，不会无限增长。想清空直接删掉这个文件即可。
+**这份日志只在「没清干净」时才需要**，所以它留下什么完全取决于结果：
+
+| 这次卸载的结果 | 日志里留下什么 |
+| --- | --- |
+| 清理成功（`pip` 退出码 0），或无需清理（没有环境记录 / 记录里没有要负责的包） | 只有一行摘要：`[时间] 卸载完成：清理 N 个包，pip 退出码 0` |
+| `pip` 退出码非 0、调用 `pip` 失败、环境记录里没有解释器路径 | **完整转录**（留给排查） |
+| 等了 120 秒仍未确认插件被移除 | **完整转录**（留给排查） |
+
+> 失败路径的日志会累积，裁剪发生在看门狗**启动**时：超过 64 KB 就只保留最近约 16 KB。想清空直接删掉这个文件即可；`install.ps1 -Uninstall` 也会顺手删掉它（加 `-KeepRemovalLog` 可保留）。
 
 另外，`pip install` 会往 pip 自己的缓存目录里留 wheel（通常 `%LOCALAPPDATA%\pip\cache`，本机实测约 120 MB）。它属于 pip 而非本插件，卸载本插件不会清它，想清就执行 `pip cache purge`。
 
@@ -462,7 +471,7 @@ read_office_as_markdown({ action: "status" })
 | 想彻底关闭 | 受管块 `enabled: false` 后重启，或 DSH 插件管理里禁用 |
 | 从 Releases 下的 `.tgz` 里找不到 `install.ps1` | 这是正常的：`.tgz` 是 npm 包结构，只含 `lib/`、`cordis.patch.yml`、`README.md`、`package.json`、`LICENSE`。**要脚本请改用方式 3**：同一页的 `.zip` 源码快照里有 `install.ps1`（不必装 git），也可以 `git clone` |
 | `install.ps1` 报"禁止运行脚本" | 先执行 `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force` |
-| `install.ps1` 中文乱码 / 语法报错 | 脚本与 README 均以 **UTF-8（无 BOM）** 保存；请勿另存为 ANSI / GBK，否则脚本里的中文提示会变乱码 |
+| `install.ps1` 中文乱码 / 语法报错 | 脚本以 **UTF-8 带 BOM** 保存（`README.md` 等其它文件是无 BOM）—— Windows PowerShell 5.1 只有见到 BOM 才会按 UTF-8 解码，否则按 ANSI 读，中文提示会全部乱码。**请勿用会去掉 BOM 的编辑器另存它** |
 | `install.ps1` 说"没有找到任何 Python 解释器" | 目标电脑还没装 Python。插件仍能用（走 Node 兜底）；装上 Python 后重跑 `& .\install.ps1 -SkipCopy` 就能看到它 |
 | 卸载后 markitdown 还在 | 只有**登记过**的包才会被卸载：用设置页「一键配置」装 / 登记的，以及 DSH 自带运行时里被自动登记的那一份。你在**别的** Python 环境里自己 `pip install` 的、或登记后又手工装到别处的，插件都不会去动。要干净卸载就手工 `pip uninstall markitdown`；如果连环境记录都没写下来，说明当时登记失败了，设置页会有一行「登记失败」的日志 |
 | 卸载插件后 Python 包没被清掉 | 先看 `~/.dsh/dsh-plugin-office-markdown-removal.log`。① profile 的 `package.json` 里 `dsh.profile.bundles` 仍列着本插件 → 插件认为你只是禁用了它；② 120 秒内包目录一直没消失 → 看门狗超时放弃，改用 `install.ps1 -Uninstall` 照样能清；③ 检查 `removeEnvOnUninstall` 是否被改成了 `false` |

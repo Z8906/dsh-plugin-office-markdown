@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-office-markdown",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "DeepSeek Harness（DSH）bundle 插件：在模型读取工作区里的 Office / PDF 文件之前，用 Microsoft MarkItDown 自动把它们转成 Markdown，转换结果写在源文件旁边，因此进入上下文的只是一个 .md 路径。产物完整保留、绝不裁剪，同时返回字节数、行数、token 估算与标题结构索引，并给出「先看结构、再用 grep 定位」的读取策略；支持一次调用批量转换多个文件或整个目录。内置设置页可以检查本机的 Python 环境、按需一键配置或卸载 MarkItDown，也可以直接试转一个文件确认转换链真的可用。在 DSH 里卸载本插件时，会连同它自己记录过的 Python 环境一起清理干净。",
   "license": "MIT",
   "author": "Z8906",

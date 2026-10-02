@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
     安装 / 卸载 dsh-plugin-office-markdown 到指定的 DSH profile。
@@ -23,7 +23,9 @@
       - 移除受管块、插件目录、package.json 登记；
       - 按 <用户目录>\.dsh\dsh-plugin-office-markdown.env.json 快照，把**由本插件**
         安装的包 pip uninstall 掉。没有快照（说明环境是用户自己装的，或从没用过
-        一键配置）就一个包都不动。
+        一键配置）就一个包都不动；
+      - 删掉卸载日志 <用户目录>\.dsh\dsh-plugin-office-markdown-removal.log
+        （脱离宿主的看门狗写的记录；加 -KeepRemovalLog 可留着它）。
 
     插件运行时不留任何临时文件：每次转换只在源文件旁边写一个 .md，没有临时目录、
     没有登记表、没有缓存元数据。那个 .md 属于用户，本脚本和插件都不会去删它。
@@ -64,8 +66,13 @@
 .PARAMETER KeepMarkitdown
     卸载时保留已经装好的 markitdown 及其依赖，不做 pip uninstall（只删快照）。
 
+.PARAMETER KeepRemovalLog
+    卸载时保留卸载日志 <DSH 数据目录>\dsh-plugin-office-markdown-removal.log。
+    默认会删掉它：彻底卸载的语义就是不留东西。
+
 .PARAMETER Uninstall
-    移除受管 insert 块、插件目录、RegisterBundle 登记，并按环境快照恢复 Python 环境。
+    移除受管 insert 块、插件目录、RegisterBundle 登记，按环境快照恢复 Python 环境，
+    并删除卸载日志（除非给了 -KeepRemovalLog）。
 
 .EXAMPLE
     Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
@@ -74,6 +81,7 @@
     & .\install.ps1 -SkipEnv                 # 完全不调用 Python
     & .\install.ps1 -Uninstall
     & .\install.ps1 -Uninstall -KeepMarkitdown
+    & .\install.ps1 -Uninstall -KeepRemovalLog
 
     也可以直接用 Windows PowerShell 调用:
     powershell -ExecutionPolicy Bypass -File .\install.ps1
@@ -90,6 +98,7 @@ param(
     [switch]$Disabled,
     [switch]$RegisterBundle,
     [switch]$KeepMarkitdown,
+    [switch]$KeepRemovalLog,
     [switch]$Uninstall
 )
 
@@ -183,6 +192,7 @@ $pkgJsonPath = Join-Path $ProfileDir 'package.json'
 $moduleDir = Join-Path $ProfileDir "node_modules\$PackageName"
 $envSnapshotPath = Join-Path $DshHome $EnvSnapshotName
 $legacySnapshotPath = Join-Path $ProfileDir ".$EnvSnapshotName"
+$removalLogPath = Join-Path $DshHome 'dsh-plugin-office-markdown-removal.log'
 
 # ---------------------------------------------------------------- 卸载
 if ($Uninstall) {
@@ -252,6 +262,17 @@ if ($Uninstall) {
         }
     } else {
         Write-Step "没有环境快照：这台机器上的 Python 包不是由本插件安装或登记的，一个都不会卸载"
+    }
+
+    # 卸载日志：只有脱离宿主的看门狗会写它，而本插件被卸载之后，这台机器上已经没有
+    # 本插件的代码会来收拾它（本脚本是唯一还能跑的东西）。彻底卸载顺手清掉。
+    if ($KeepRemovalLog) {
+        if (Test-Path -LiteralPath $removalLogPath) {
+            Write-Step "-KeepRemovalLog：保留卸载日志 $removalLogPath"
+        }
+    } elseif (Test-Path -LiteralPath $removalLogPath) {
+        Remove-Item -LiteralPath $removalLogPath -Force
+        Write-Ok "已删除卸载日志 $removalLogPath"
     }
 
     Write-Host ""
@@ -512,9 +533,10 @@ Write-Host "  4. 关闭插件（两种都有效，效果都是“等于没装”
 Write-Host "       - DSH 插件管理里禁用 office-markdown（loader 层 disabled: true，立即生效）"
 Write-Host "       - 或 & .\install.ps1 -Disabled -SkipCopy（插件 config 的 enabled: false，重启生效）"
 Write-Host "  5. 彻底卸载: & .\install.ps1 -Uninstall"
-Write-Host "     会删掉插件、受管块、设置页，并卸载本插件配置过的 Python 包。"
+Write-Host "     会删掉插件、受管块、设置页、卸载日志，并卸载本插件配置过的 Python 包。"
 Write-Host "     用户自己装的 markitdown（没有环境快照）不会被碰。"
 Write-Host "     想留着 markitdown: & .\install.ps1 -Uninstall -KeepMarkitdown"
+Write-Host "     想留着卸载日志: & .\install.ps1 -Uninstall -KeepRemovalLog"
 Write-Host "  6. 插件不产生任何临时文件：转换结果就是一个 .md，写在源文件旁边，"
 Write-Host "     没有临时目录、登记表或缓存元数据。那个 .md 归你所有，什么时候删都行。"
 Write-Host ""
