@@ -9,7 +9,7 @@
 | npm 依赖 | **0 个**（只用 Node 内置模块；`@deepseek-ai/dsh-tools` 由 DSH 自身提供） |
 | 运行环境 | DSH（bundle 插件），Node ≥ 18；Python / MarkItDown 全部**可选** |
 
-> **开发方式**：本项目的代码与文档**主要由 DeepSeek 开发**（DeepSeek Harness 内置的 AI 编码代理），人类维护者负责提出需求、验收行为、发布版本与对外决定。
+> **开发方式**：本项目的代码与文档**主要由 DeepSeek 开发**
 
 ```
 docx / xlsx / pptx / pdf  ──▶  MarkItDown（或内置兜底转换器）  ──▶  源文件旁边的 xxx.md  ──▶  按需 read
