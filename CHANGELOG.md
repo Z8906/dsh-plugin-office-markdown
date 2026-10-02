@@ -1,23 +1,36 @@
 # 更新日志
 
+[← 返回首页](README.md) ｜ [安装](docs/installation.md) · [卸载](docs/uninstall.md) · [故障排查](docs/troubleshooting.md)
+
 本文件记录 `dsh-plugin-office-markdown` 的每个发布版本，版本号与 Git tag 一致。
 
-- 推 `v*` tag 时，`.github/workflows/release.yml` 会从本文件提取对应小节并作为 GitHub Release 的说明，
-  因此请**保留 `## [x.y.z]` 这一标题写法**，也不要修改已发布版本的标题。
+- 推 `v*` tag 时，`.github/workflows/release.yml` 会从本文件提取对应小节并作为 GitHub Release 的说明，因此请**保留 `## [x.y.z]` 这一标题写法**，也不要修改已发布版本的标题。
 - 本文件**不随 `.tgz` 发布**（`package.json` 的 `files` 白名单里没有它），只存在于仓库中。
-- 分类沿用 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)：
-  `Added` / `Changed` / `Fixed` / `Breaking Changes` / `Known Issues`。
-- 各版本的安装与升级方式见 [README](README.md)。
+- 分类沿用 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)：`Added` / `Changed` / `Fixed` / `Breaking Changes` / `Known Issues`。
+
+## 版本一览
+
+| 版本 | 日期 | 状态 | 主题 |
+| --- | --- | --- | --- |
+| [1.2.1](#121---2026-10-03) | 2026-10-03 | 🟢 **推荐使用** | 卸载不再往 `~/.dsh` 里留东西 |
+| [1.2.0](#120---2026-10-02) | 2026-10-02 | 🟢 **推荐使用** | 产物保真度、结构索引、陈旧产物清理、批量与目录展开 |
+| [1.1.1](#111---2026-10-01) | 2026-10-01 | 🟡 过渡版本 | 安装脚本 `-RegisterBundle`，转换能力与 1.1.0 相同 |
+| [1.1.0](#110---2026-10-01) | 2026-10-01 | 🟠 可用但功能不全 | 数据目录不再写死；卸载时脱离宿主补清 Python 环境 |
+| [1.0.0](#100---2026-10-01) | 2026-10-01 | 🔴 **无法正常使用** | 首版，已废弃 |
+
+**新装请用 v1.2.1。** 版本之间的安装、升级与卸载差异见 [安装](docs/installation.md) 与 [卸载](docs/uninstall.md)。
 
 ## 关于日期
 
 `v1.0.0`、`v1.1.0`、`v1.1.1` 的 tag 与 Release 是 **2026-10-01 同一天一次性补建**的
 （三个 tag 的 tagger 时间同为 `20:58:23`，三个 Release 的发布时间相隔 2 秒），所以这三个版本的日期相同；
-项目实际开发自 2026-08 起 —— 补档不等于发布。`v1.2.0`（2026-10-02）是真实发布日。
+项目实际开发自 2026-08 起 —— 补档不等于发布。`v1.2.0`（2026-10-02）与 `v1.2.1`（2026-10-03）是真实发布日。
+
+---
 
 ## [1.2.1] - 2026-10-03
 
-主题：卸载不再往 `~/.dsh` 里留东西。
+**主题**：卸载不再往 `~/.dsh` 里留东西。
 
 ### Changed
 
@@ -38,9 +51,19 @@
   但仓库里的文件其实没有 BOM。Windows PowerShell 5.1 读无 BOM 的 `.ps1` 会按 ANSI 解码，
   中文提示会全部乱码（已在本机 PowerShell 5.1.26100 实测确认）。现在按注释所说的带 BOM 保存。
 
+### Breaking Changes
+
+- 无。
+
+### Known Issues
+
+- 无新增。转换能力与 v1.2.0 完全相同。
+
+---
+
 ## [1.2.0] - 2026-10-02
 
-主题：把「转换好了却读不到」「读不到还硬读」「产物越攒越多」这三类浪费一次性修掉。
+**主题**：把「转换好了却读不到」「读不到还硬读」「产物越攒越多」这三类浪费一次性修掉。
 
 ### Added
 
@@ -95,6 +118,12 @@
 
 - 无。
 
+### Known Issues
+
+- 无。
+
+---
+
 ## [1.1.1] - 2026-10-01
 
 相对 v1.1.0 **没有新的转换能力**，主要补安装体验。
@@ -113,10 +142,17 @@
 
 - `README.md` 调整安装章节；`package.json` 更新。
 
+### Breaking Changes
+
+- 无。
+
 ### Known Issues
 
 - 转换能力与 v1.1.0 相同：不具备 v1.2.0 的产物保真度标记、结构索引、批量与目录展开、
-  `action:"clean"` / `pruneStaleArtifacts`、内容未变复用、试转入口；环境探测是串行且可能卡住设置页。
+  `action: "clean"` / `pruneStaleArtifacts`、内容未变复用、试转入口；环境探测是串行且可能卡住设置页。
+- **升级时不要走「卸载 → 重装」** —— 卸载会触发 Python 环境清理（v1.1.0 引入的行为）。
+
+---
 
 ## [1.1.0] - 2026-10-01
 
@@ -135,11 +171,17 @@
 - `lib/convert.js`、`lib/env.js`、`lib/index.js` 更新；`install.ps1` 整体重写；
   `README.md`、`package.json` 更新。
 
+### Breaking Changes
+
+- 无。
+
 ### Known Issues
 
 - 不具备 v1.2.0 的能力：无产物保真度标记、无 `lineCount` / `outline`、无批量与目录展开、
-  无 `action:"clean"` / `pruneStaleArtifacts`、无「内容没变就复用」、无试转入口；
+  无 `action: "clean"` / `pruneStaleArtifacts`、无「内容没变就复用」、无试转入口；
   环境探测是串行且可能卡住设置页。
+
+---
 
 ## [1.0.0] - 2026-10-01
 
