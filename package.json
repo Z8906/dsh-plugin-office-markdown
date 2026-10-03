@@ -40,10 +40,14 @@
     "cordis",
     "markitdown",
     "office",
+    "docx",
+    "xlsx",
+    "pptx",
     "pdf",
     "markdown",
     "batch-conversion",
-    "token-optimization"
+    "token-saving",
+    "context-optimization"
   ],
   "engines": {
     "node": ">=18"
