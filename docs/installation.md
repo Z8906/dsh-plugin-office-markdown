@@ -9,37 +9,63 @@
 - 方式 1、2 需要网络；完全离线时用方式 3 或 4。
 - 想用高保真转换，需要一个 Python 3 解释器 —— **可选**，没有时插件走内置兜底转换器。
 
-## 方式 1：从 GitHub 安装（推荐）
+## 方式 1：从 npm 安装（推荐）
 
-打开 **设置 → 插件 → 安装**，填入下面这一行，回车：
-
-```
-github:Z8906/dsh-plugin-office-markdown
-```
-
-要锁版本就在末尾加上 tag（`<tag>` 形如 `v1.2.1`）：
+npm 上从 `1.2.2` 起有正式发布。打开 **设置 → 插件 → 安装**，填入下面这一行，回车：
 
 ```
-github:Z8906/dsh-plugin-office-markdown#<tag>
+dsh-plugin-office-markdown
+```
+
+要锁版本就在后面加 `@版本`（`<版本>` 形如 `1.2.2`）：
+
+```
+dsh-plugin-office-markdown@<版本>
 ```
 
 装完之后**必须重启 DSH**。这是一个 bundle 插件，DSH 在启动时装载它；
 不重启的话插件文件已经在磁盘上，但宿主还没加载它。
 
-## 方式 2：从 Release 的 `.tgz`
+## 方式 2：从 GitHub 安装
+
+npm 不可达（内网、镜像缺失）时用这条。同样填进安装框：
+
+```
+github:Z8906/dsh-plugin-office-markdown
+```
+
+要锁 tag 就在末尾加上（`<tag>` 形如 `v1.2.2`）：
+
+```
+github:Z8906/dsh-plugin-office-markdown#<tag>
+```
+
+## 方式 3：从 Release 的 `.tgz`
 
 在 [Releases](https://github.com/Z8906/dsh-plugin-office-markdown/releases) 里下载
 `dsh-plugin-office-markdown-<版本>.tgz`，解压或直接把这个文件的**绝对路径**填进安装框。
 
 目标机器没有 git 时用这条。`.tgz` 里包含 `lib/`、`cordis.patch.yml`、`README.md`、`package.json`、`LICENSE`。
 
-## 方式 3：从本地目录
+## 方式 4：从本地目录
 
 把仓库克隆或复制到本机，然后在安装框里填本地路径（`file:` 前缀或绝对路径）。
 
 适合要改代码的场景 —— 见 [开发文档](development.md)。
 
-## 方式 4：手工运行 `install.ps1`
+## 方式 5：命令行安装
+
+`dsh plugin` 会把参数转发给目标 profile 目录里的 pnpm，`--profile` 指定 profile 名
+（常见的是 `web`，桌面版是 `desktop`）：
+
+```sh
+dsh plugin --profile <你的 profile> add dsh-plugin-office-markdown
+```
+
+同一套命令也用于移除与安装依赖：`dsh plugin --profile <name> remove <package>`、
+`dsh plugin --profile <name> install`。
+
+## 方式 6：手工运行 `install.ps1`
 
 仓库根目录的 `install.ps1` 用于不走设置页的安装。它的参数：
 
@@ -67,17 +93,19 @@ github:Z8906/dsh-plugin-office-markdown#<tag>
 Python 包（[卸载文档](uninstall.md) 说明了判定过程），所以那条路的结果是
 「插件更新到新版了，Python 环境却没了」。
 
-正确的做法是二选一：
+正确的做法是任选其一：
 
 ```powershell
 pnpm update dsh-plugin-office-markdown
 ```
 
-或者直接在安装框里再 add 一次同一个 git 地址，然后重启 DSH。
+- 在 **设置 → 插件市场** 里点该插件的更新（npm 源的插件，市场能识别版本差异并一键更新）；
+- 直接在安装框里再 add 一次同一个地址，然后重启 DSH。
 
 ## 验证装好了
 
-1. **设置 → 插件**：列表里能看到 `dsh-plugin-office-markdown`，版本号与预期一致。
+1. **设置 → 插件**：列表里能看到 `dsh-plugin-office-markdown`，版本号与
+   [Releases](https://github.com/Z8906/dsh-plugin-office-markdown/releases) 上的最新 tag 一致。
 2. **设置 → Office 转换**：能看到「当前转换器」和本机 Python 环境探测结果。
    （profile 没有 `webServer` 服务时不会有这一页，属于正常现象。）
 3. 让模型读一个 `.xlsx`，观察它是不是先调用了转换工具。

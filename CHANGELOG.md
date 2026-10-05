@@ -61,6 +61,17 @@
   npm 发布与 GitHub Release，仓库与本地都不再需要长期 npm token，并自动附带
   build provenance 签名。
 
+### 安装渠道
+
+本版起 **npm 上有了正式发布**，可以在 DSH 的 **设置 → 插件 → 安装** 里直接填包名安装：
+
+```
+dsh-plugin-office-markdown
+```
+
+要锁版本就写 `dsh-plugin-office-markdown@1.2.2`。原来那条 GitHub 安装方式仍然可用，
+两个来源装的是同一份代码 —— `v*` tag 会同时发布到 npm 与 GitHub Release。
+
 ## [1.2.1] - 2026-10-03
 
 **主题**：卸载不再往 `~/.dsh` 里留东西。

@@ -12,6 +12,7 @@
 <p align="center">
   <a href="https://github.com/Z8906/dsh-plugin-office-markdown/releases"><img alt="release" src="https://img.shields.io/github/v/release/Z8906/dsh-plugin-office-markdown?style=flat-square&label=release"></a>
   <img alt="license" src="https://img.shields.io/badge/license-MIT-blue?style=flat-square">
+  <img alt="npm" src="https://img.shields.io/npm/v/dsh-plugin-office-markdown?style=flat-square&label=npm">
   <img alt="node" src="https://img.shields.io/badge/node-%E2%89%A518-brightgreen?style=flat-square">
   <img alt="npm dependencies" src="https://img.shields.io/badge/npm%20deps-0-brightgreen?style=flat-square">
 </p>
@@ -26,25 +27,49 @@
 
 ---
 
+> 🤖 **本项目的代码与文档主要由 AI 生成** —— 由 DeepSeek Harness 里的编码 agent 撰写，经维护者审阅后发布。
+> 配置项、HTTP 路由、转换器链与文件清单等内容都**逐项对照过源码**；但文档仍可能落后于实现，
+> 或存在表述不准、细节缺失，**请以代码为准**。详见[文末说明](#关于本文档)。
+
 转换在**本机**完成，不联网（可选的 MarkItDown 首次下载除外）、不修改原文件、
 不消耗 API 额度，插件本身**没有任何 npm 依赖**。
 
 ## 安装
 
-在 DSH 的 **设置 → 插件 → 安装** 里填一行，回车，然后**重启 DSH**：
+在 DSH 的 **设置 → 插件 → 安装** 里填一行，回车，然后**重启 DSH**。
+
+**① 从 npm 安装（推荐）** —— npm 上从 1.2.2 起有正式发布：
+
+```
+dsh-plugin-office-markdown
+```
+
+要锁版本就在后面加 `@版本`：`dsh-plugin-office-markdown@<版本>`，`<版本>` 形如 `1.2.2`。
+
+**② 从 GitHub 安装** —— npm 不可达时用这条：
 
 ```
 github:Z8906/dsh-plugin-office-markdown
 ```
 
-想锁定版本就在末尾加 tag：`github:Z8906/dsh-plugin-office-markdown#<tag>`，
-`<tag>` 形如 `v1.2.1`（见 [Releases](https://github.com/Z8906/dsh-plugin-office-markdown/releases)）。
-目标机器没有 git 的话，可以用 Releases 里的 `.tgz`，在安装框里填它的绝对路径。
-四种安装方式、手工装法与升级步骤见 **[安装文档](docs/installation.md)**。
+要锁 tag 就在末尾加 `#<tag>`：`github:Z8906/dsh-plugin-office-markdown#<tag>`，
+`<tag>` 形如 `v1.2.2`（见 [Releases](https://github.com/Z8906/dsh-plugin-office-markdown/releases)）。
+
+**③ 离线 / 没有 git** —— 用 Releases 里的 `.tgz`，在安装框里填它的**绝对路径**；
+也可以填本地克隆目录的路径（`file:` 前缀或绝对路径）。
+
+习惯命令行的话，`dsh plugin` 会把参数转发给 profile 目录里的 pnpm：
+
+```sh
+dsh plugin --profile <你的 profile> add dsh-plugin-office-markdown
+```
+
+全部安装方式、手工装法与升级步骤见 **[安装文档](docs/installation.md)**。
 
 > **升级不要走「卸载 → 重新安装」。** 本插件在真正被卸载时会清理它自己登记过的 Python 包
 > （见 [卸载文档](docs/uninstall.md)），那条路的结果是「插件更新了、Python 环境却没了」。
-> 用 `pnpm update`，或者直接在安装框里再 add 一次同一个 git 地址。
+> 正确做法：`pnpm update dsh-plugin-office-markdown`，或在插件市场里点更新，
+> 或直接在安装框里再 add 一次同一个地址。
 
 ## 怎么用
 

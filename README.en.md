@@ -12,6 +12,7 @@
 <p align="center">
   <a href="https://github.com/Z8906/dsh-plugin-office-markdown/releases"><img alt="release" src="https://img.shields.io/github/v/release/Z8906/dsh-plugin-office-markdown?style=flat-square&label=release"></a>
   <img alt="license" src="https://img.shields.io/badge/license-MIT-blue?style=flat-square">
+  <img alt="npm" src="https://img.shields.io/npm/v/dsh-plugin-office-markdown?style=flat-square&label=npm">
   <img alt="node" src="https://img.shields.io/badge/node-%E2%89%A518-brightgreen?style=flat-square">
   <img alt="npm dependencies" src="https://img.shields.io/badge/npm%20deps-0-brightgreen?style=flat-square">
 </p>
@@ -26,27 +27,51 @@
 
 ---
 
+> 🤖 **This project's code and documentation are largely AI-generated** — written by a coding agent running
+> inside DeepSeek Harness and reviewed by the maintainer before publishing. Config keys, HTTP routes, the
+> converter chain and the file list were each **checked against the source**; even so the docs can lag
+> behind the implementation — **the code is the reference**. See the [note at the end](#about-this-documentation).
+
 Conversion happens **locally**: no network (except an optional first MarkItDown download), the source
 file is never modified, no API budget is spent, and the plugin itself has **zero npm dependencies**.
 
 ## Install
 
-In DSH, open **Settings → Plugins → Install**, paste one line, press Enter, then **restart DSH**:
+In DSH, open **Settings → Plugins → Install**, paste one line, press Enter, then **restart DSH**.
+
+**① From npm (recommended)** — published on npm since 1.2.2:
+
+```
+dsh-plugin-office-markdown
+```
+
+To pin a version, append `@version`: `dsh-plugin-office-markdown@<version>`, where `<version>` looks like `1.2.2`.
+
+**② From GitHub** — use this when npm is unreachable:
 
 ```
 github:Z8906/dsh-plugin-office-markdown
 ```
 
-To pin a version, append a tag: `github:Z8906/dsh-plugin-office-markdown#<tag>`, where `<tag>` looks like
-`v1.2.1` (see [Releases](https://github.com/Z8906/dsh-plugin-office-markdown/releases)).
-If the target machine has no git, use the `.tgz` from Releases and paste its absolute path into the
-install box. All four install routes, the manual route and the upgrade steps are in the
+To pin a tag, append `#<tag>`: `github:Z8906/dsh-plugin-office-markdown#<tag>`, where `<tag>` looks like
+`v1.2.2` (see [Releases](https://github.com/Z8906/dsh-plugin-office-markdown/releases)).
+
+**③ Offline / no git** — use the `.tgz` from Releases and paste its **absolute path** into the install box;
+a local clone path works too (`file:` prefix or an absolute path).
+
+On the command line, `dsh plugin` forwards its arguments to pnpm inside the profile directory:
+
+```sh
+dsh plugin --profile <your profile> add dsh-plugin-office-markdown
+```
+
+All install routes, the manual route and the upgrade steps are in the
 **[installation docs](docs/installation.md)**.
 
 > **Do not upgrade through "uninstall → reinstall".** When this plugin is really uninstalled it cleans up
 > the Python packages it registered (see the [uninstall docs](docs/uninstall.md)), so that route leaves you
-> with an updated plugin and no Python environment. Use `pnpm update`, or add the same git address again
-> in the install box.
+> with an updated plugin and no Python environment. Instead: `pnpm update dsh-plugin-office-markdown`,
+> use the Market's update button, or add the same address again in the install box.
 
 ## Usage
 
