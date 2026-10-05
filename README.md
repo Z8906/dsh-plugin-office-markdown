@@ -46,6 +46,8 @@ dsh-plugin-office-markdown
 
 要锁版本就在后面加 `@版本`：`dsh-plugin-office-markdown@<版本>`，`<版本>` 形如 `1.2.2`。
 
+> ⚠️ **框里只填包名。** 下面那条 `dsh plugin …` 是终端命令，**整行粘进框里不认**。
+
 **② 从 GitHub 安装** —— npm 不可达时用这条：
 
 ```
@@ -58,11 +60,18 @@ github:Z8906/dsh-plugin-office-markdown
 **③ 离线 / 没有 git** —— 用 Releases 里的 `.tgz`，在安装框里填它的**绝对路径**；
 也可以填本地克隆目录的路径（`file:` 前缀或绝对路径）。
 
-习惯命令行的话，`dsh plugin` 会把参数转发给 profile 目录里的 pnpm：
+习惯命令行的话，`dsh plugin` 会把参数转发给 profile 目录里的 pnpm —— `--profile` 按你用的是哪个版本填：
 
 ```sh
-dsh plugin --profile <你的 profile> add dsh-plugin-office-markdown
+# Web 版 DSH
+dsh plugin --profile web add dsh-plugin-office-markdown
+
+# 桌面版 DSH（profile 名是 desktop）
+dsh plugin --profile desktop add dsh-plugin-office-markdown
 ```
+
+> ⚠️ **`--profile` 必须填你实际在用的那个。** 填错**不会报错** —— DSH 会按模板新建一个 profile，
+> 插件装进那里，而你的界面读的是另一个，结果「装好了却看不到」。
 
 全部安装方式、手工装法与升级步骤见 **[安装文档](docs/installation.md)**。
 

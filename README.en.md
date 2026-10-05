@@ -47,6 +47,9 @@ dsh-plugin-office-markdown
 
 To pin a version, append `@version`: `dsh-plugin-office-markdown@<version>`, where `<version>` looks like `1.2.2`.
 
+> ⚠️ **The box takes the package name only.** The `dsh plugin …` line below is a terminal command —
+> pasting the whole line into the box will not work.
+
 **② From GitHub** — use this when npm is unreachable:
 
 ```
@@ -59,11 +62,20 @@ To pin a tag, append `#<tag>`: `github:Z8906/dsh-plugin-office-markdown#<tag>`, 
 **③ Offline / no git** — use the `.tgz` from Releases and paste its **absolute path** into the install box;
 a local clone path works too (`file:` prefix or an absolute path).
 
-On the command line, `dsh plugin` forwards its arguments to pnpm inside the profile directory:
+On the command line, `dsh plugin` forwards its arguments to pnpm inside the profile directory — pick
+`--profile` according to the DSH flavour you run:
 
 ```sh
-dsh plugin --profile <your profile> add dsh-plugin-office-markdown
+# DSH web
+dsh plugin --profile web add dsh-plugin-office-markdown
+
+# DSH desktop (the profile is named desktop)
+dsh plugin --profile desktop add dsh-plugin-office-markdown
 ```
+
+> ⚠️ **`--profile` must name the profile you actually use.** A wrong name **fails silently**: DSH creates
+> a new profile from its template, installs the plugin there, while your UI reads a different one —
+> so it looks installed but never shows up.
 
 All install routes, the manual route and the upgrade steps are in the
 **[installation docs](docs/installation.md)**.

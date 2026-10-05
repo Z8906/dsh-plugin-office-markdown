@@ -23,6 +23,9 @@ dsh-plugin-office-markdown
 dsh-plugin-office-markdown@<版本>
 ```
 
+> ⚠️ **安装框里只填包名**（也可以带 `@版本`）。下面「方式 5」那条 `dsh plugin …` 是终端命令，
+> **整行粘进框里不会被识别**。
+
 装完之后**必须重启 DSH**。这是一个 bundle 插件，DSH 在启动时装载它；
 不重启的话插件文件已经在磁盘上，但宿主还没加载它。
 
@@ -55,15 +58,24 @@ github:Z8906/dsh-plugin-office-markdown#<tag>
 
 ## 方式 5：命令行安装
 
-`dsh plugin` 会把参数转发给目标 profile 目录里的 pnpm，`--profile` 指定 profile 名
-（常见的是 `web`，桌面版是 `desktop`）：
+`dsh plugin` 会把参数转发给目标 profile 目录里的 pnpm，`--profile` 指定 profile 名：
 
 ```sh
-dsh plugin --profile <你的 profile> add dsh-plugin-office-markdown
+# Web 版 DSH
+dsh plugin --profile web add dsh-plugin-office-markdown
+
+# 桌面版 DSH（profile 名是 desktop）
+dsh plugin --profile desktop add dsh-plugin-office-markdown
 ```
 
-同一套命令也用于移除与安装依赖：`dsh plugin --profile <name> remove <package>`、
-`dsh plugin --profile <name> install`。
+DSH 自带 `web` / `headless` / `sdk` / `acp` 这几个 profile（首次使用时自动创建）；
+桌面应用用的是 `desktop`。
+
+> ⚠️ **`--profile` 必须填你实际在用的那个。** 填错**不会报错** —— DSH 会按模板新建一个 profile，
+> 插件装进那里，而当前界面读的是另一个，于是「装好了却看不到」。
+
+同一套命令也用于移除、安装依赖与升级：`dsh plugin --profile <name> remove <package>`、
+`dsh plugin --profile <name> install`、`dsh plugin --profile <name> update <package>@latest`。
 
 ## 方式 6：手工运行 `install.ps1`
 
