@@ -6,6 +6,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   release:
@@ -15,7 +16,13 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: 升级 npm（可信发布需要 npm 11.5.1 以上）
+        run: |
+          npm install -g npm@latest
+          npm --version
 
       - name: 校验 tag 与 package.json 版本号
         run: |
@@ -53,6 +60,9 @@ jobs:
 
       - name: 打包
         run: npm pack
+
+      - name: 发布到 npm（OIDC 可信发布）
+        run: npm publish ./dsh-plugin-office-markdown-*.tgz --access public --provenance
 
       - name: 创建 Release 并上传 .tgz
         env:
