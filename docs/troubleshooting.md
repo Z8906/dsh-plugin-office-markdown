@@ -18,7 +18,7 @@
 | 一直用兜底转换器，保真度低 | 没有可用的 MarkItDown | 设置页点「一键配置 MarkItDown 环境」 |
 | 设置了 `converter` 却不生效 | 填的值不在合法取值里，或该级不可用 | 对照 [配置文档](configuration.md)；填错会退回自动探测 |
 | `pythonPrefer: config` 但不生效 | 没配 `pythonPath` | 两者要一起配；缺一个会退回 `auto` |
-| 模型仍然直接把 Office 文件读进上下文 | `guardReadTool` 被关掉，或文件扩展名不在支持列表 | 检查配置项；见 [使用文档](usage.md) |
+| 模型直接把 Office 文件读进上下文 | 默认的 `'warn'` 只提醒一次、之后按模型自己的判断放行；设成 `false` 则完全不介入；或扩展名不在支持列表 | 想每次都拦就设 `guardReadTool: true`；见 [使用文档](usage.md) |
 | 提示 uvx 相关失败 | `uv` 不在本机，或 `allowUvxDownload` 为 `false` | 属预期行为，插件会继续探测下一级 |
 | 产物没更新 | 源文件没变，走了缓存 | 传 `force: true` |
 | 同一目录下堆了很多 `.md` | 源文件反复改动 | 用 `action: "clean"`，或打开 `pruneStaleArtifacts` |

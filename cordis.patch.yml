@@ -20,7 +20,7 @@
         allowUvxDownload: true
         uvxExtras: 'markitdown[all]'
         fallbackEnabled: true
-        guardReadTool: true
+        guardReadTool: 'warn'
         probeTtlMs: 600000
         timeoutMs: 300000
         reuseFresh: true

@@ -15,7 +15,7 @@
 | `allowUvxDownload` | 布尔 | `true` | 允许用 `uvx` 临时拉取 markitdown |
 | `uvxExtras` | 字符串 | `'markitdown[all]'` | `uvx` 拉取时带的 extras |
 | `fallbackEnabled` | 布尔 | `true` | 允许使用内置兜底转换器 |
-| `guardReadTool` | 布尔 | `true` | 拦截直接用 `read` 读二进制 Office / PDF |
+| `guardReadTool` | 布尔或 `'warn'` | `'warn'` | 模型直接读取二进制 Office / PDF 时怎么干预，见下方取值 |
 | `probeTtlMs` | 数字 | `600000` | 环境探测结果的缓存时长（毫秒） |
 | `timeoutMs` | 数字 | `300000` | 单次转换超时（毫秒） |
 | `reuseFresh` | 布尔 | `true` | 源文件没变时复用已有产物 |
@@ -28,6 +28,16 @@
 | `registerSettings` | 布尔 | `true` | 注册设置页与 HTTP 路由 |
 | `autoAdoptEnv` | 布尔 | `true` | 启动时自动认领已存在的 markitdown 环境 |
 | `removeEnvOnUninstall` | 布尔 | `true` | 真正被卸载时清理插件登记过的 Python 包 |
+
+## `guardReadTool` 的取值
+
+| 值 | 行为 |
+| --- | --- |
+| `'warn'` | **默认。** 每个路径**首次**被直接读取时给一段提醒（说明这是二进制容器、直接读会得到乱码并浪费 token、建议先转换，若已有产物则直接给出 `.md` 路径），**再次读取同一路径即放行** —— 由模型在知情的前提下自己决定 |
+| `true` | 每次都拦截，不放行 |
+| `false` | 完全不介入 |
+
+守卫覆盖 `read` 工具，也会检查 `pwsh` / `bash` 这类命令行工具：当命令里**同时**出现 Office / PDF 路径和原始读取动作（`Get-Content`、`cat`、`pdftotext`、`xxd` 等）时同样给一次提醒。转换、写入、校验之类的命令不会被提示。
 
 ## `converter` 的取值
 
