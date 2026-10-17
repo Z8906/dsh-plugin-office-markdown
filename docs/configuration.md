@@ -37,7 +37,7 @@
 | `true` | 每次都拦截，不放行 |
 | `false` | 完全不介入 |
 
-守卫覆盖 `read` 工具，也会检查 `pwsh` / `bash` 这类命令行工具：当命令里**同时**出现 Office / PDF 路径和原始读取动作（`Get-Content`、`cat`、`pdftotext`、`xxd` 等）时同样给一次提醒。转换、写入、校验之类的命令不会被提示。
+守卫覆盖 `read` 工具，也会检查 `pwsh` / `bash` 这类命令行工具：当原始读取动作（`Get-Content`、`cat`、`pdftotext`、`xxd`、`open(` 等）**直接指向**某个 Office / PDF 文件时，同样给一次提醒。转换、写入、校验，以及只是**列出**文件（`Get-ChildItem -Include *.xlsx`）这类命令不会被提示。
 
 ## `converter` 的取值
 

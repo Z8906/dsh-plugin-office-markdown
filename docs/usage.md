@@ -46,8 +46,9 @@ Office / PDF 文件时，会收到一段提醒 —— 说明这是二进制容�
 想要更硬就把 `guardReadTool` 设为 `true`（每次拦截、不放行），想完全不管就设 `false`。
 三种取值的对照见 [配置文档](configuration.md)。
 
-守卫也会检查命令行工具：当 `pwsh` / `bash` 里的命令**同时**出现 Office / PDF 路径和原始读取动作
-（`Get-Content`、`cat`、`pdftotext` 之类）时同样给一次提醒；转换、写入、校验等命令不会被提示。
+守卫也会检查命令行工具：当 `pwsh` / `bash` 里出现了**直接指向** Office / PDF 文件的原始读取动作
+（`Get-Content report.xlsx`、`cat /tmp/doc.pdf`、`pdftotext a.pdf out.txt` 这样）时同样给一次提醒；
+转换、写入、校验，以及只是列出文件（`Get-ChildItem -Include *.xlsx`）的命令都不会被提示。
 
 ## 设置页
 
