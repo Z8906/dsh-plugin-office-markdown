@@ -21,7 +21,7 @@ jobs:
       - name: 语法检查（宿主半边）
         run: |
           set -e
-          for f in lib/convert.js lib/index.js lib/env.js lib/settings-api.js lib/paths.js lib/removal-watchdog.js; do
+          for f in lib/convert.js lib/index.js lib/env.js lib/settings-api.js lib/paths.js lib/recent.js lib/removal-watchdog.js; do
             node --check "$f"
             echo "ok   $f"
           done

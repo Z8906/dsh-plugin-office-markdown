@@ -25,6 +25,7 @@ lib/fallback-node.js
 lib/fallback.py
 lib/index.js
 lib/paths.js
+lib/recent.js
 lib/removal-watchdog.js
 lib/settings-api.js
 package.json
@@ -38,6 +39,7 @@ package.json
 | `lib/convert.js` | 转换器链：探测、选择、执行、元信息写入 |
 | `lib/env.js` | Python 环境发现、登记（`*.env.json`）、安装 / 卸载 |
 | `lib/settings-api.js` | 设置页的 HTTP 路由 |
+| `lib/recent.js` | 记住「最近一次工具调用看到的工作区」（内存，不落盘），供设置页列文件用 |
 | `lib/client.js` | 设置页前端 |
 | `lib/paths.js` | 路径拼装 |
 | `lib/fallback.py` | 内置 Python 兜底转换器 |
