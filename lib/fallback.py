@@ -15,6 +15,22 @@ Usage:
                        [--max-rows N] [--max-cols N] [--max-cells N] [--max-slides N]
 
 Exit codes: 0 ok, 2 unsupported format, 3 conversion error, 4 empty result.
+
+本文件结构（按出现顺序）：
+
+    helpers      cell() 清单元格 / md_table() 拼 Markdown 表格（带行列截断与说明）
+    docx         convert_docx()       python-docx，样式名 → # 级标题
+    xlsx         convert_xlsx()       openpyxl，每个工作表一个 ## 小节
+    pptx         _shape_text() / convert_pptx()  每页取标题 + 正文列表
+    分隔文本     sniff_delimiter() / convert_delimited() / convert_text() / convert_json()
+    html         convert_html()       正则去标签 + 还原实体
+    rtf          convert_rtf()        转义还原
+    pdf          _decode_pdf_string() / _iter_pdf_streams() / _inflate() /
+                 _content_stream_text() / convert_pdf()   手工解析 PDF 内容流
+    main         参数解析、按扩展名分派、写文件与退出码
+
+定位：这是 Python 侧的**最后兜底**，只在 MarkItDown 三级（uvx / 命令行 / -m）
+全部不可用时才会被 convert.js 调用。保真度明确声明为 limited。
 """
 
 from __future__ import annotations
@@ -46,7 +62,7 @@ UNSUPPORTED = {
 
 
 # --------------------------------------------------------------------------
-# helpers
+# helpers：单元格清洗 + Markdown 表格拼装
 # --------------------------------------------------------------------------
 
 def cell(value) -> str:
@@ -87,7 +103,7 @@ def md_table(rows: list[list[str]], max_rows: int, max_cols: int, note: list[str
 
 
 # --------------------------------------------------------------------------
-# docx
+# docx：python-docx 逐段落 / 逐表格输出，样式名映射成标题层级
 # --------------------------------------------------------------------------
 
 _HEADING_RE = re.compile(r"(?:heading|标题)\s*(\d+)", re.I)
@@ -166,7 +182,7 @@ def convert_docx(src: str, opt) -> tuple[str, list[str]]:
 
 
 # --------------------------------------------------------------------------
-# xlsx
+# xlsx：openpyxl 读工作表，每张表一个 ## 小节
 # --------------------------------------------------------------------------
 
 def convert_xlsx(src: str, opt) -> tuple[str, list[str]]:
@@ -215,7 +231,7 @@ def convert_xlsx(src: str, opt) -> tuple[str, list[str]]:
 
 
 # --------------------------------------------------------------------------
-# pptx
+# pptx：每张幻灯片取标题段落 + 其余文本列表
 # --------------------------------------------------------------------------
 
 def _shape_text(shape) -> list[str]:
@@ -338,6 +354,7 @@ def convert_json(src: str, opt) -> tuple[str, list[str]]:
 # html
 # --------------------------------------------------------------------------
 
+"""HTML → Markdown：去标签、还原实体、把常见块级元素转成对应 Markdown 结构。"""
 def convert_html(src: str, opt) -> tuple[str, list[str]]:
     from html.parser import HTMLParser
 
@@ -378,6 +395,7 @@ def convert_html(src: str, opt) -> tuple[str, list[str]]:
 # rtf
 # --------------------------------------------------------------------------
 
+"""RTF → Markdown：处理控制字与转义，只保留可读文本。"""
 def convert_rtf(src: str, opt) -> tuple[str, list[str]]:
     with open(src, "rb") as handle:
         data = handle.read().decode("latin-1", errors="replace")
@@ -398,6 +416,11 @@ _TOKEN_RE = re.compile(rb"\((?:[^()\\]|\\.)*\)|T\*|Td|TD|ET|Tj|TJ", re.S)
 _OCTAL_RE = re.compile(rb"\\([0-7]{1,3})")
 
 
+# --------------------------------------------------------------------------
+# pdf：手工解析（不依赖第三方库）—— 解压内容流、从 Tj/TJ 操作符里取文本
+# --------------------------------------------------------------------------
+
+"""解码 PDF 字符串字面量（含反斜杠转义与八进制转义）。"""
 def _decode_pdf_string(raw: bytes) -> str:
     out = bytearray()
     i = 0
@@ -525,6 +548,7 @@ CONVERTERS = {
 }
 
 
+"""命令行入口：解析参数、按扩展名分派、写产物，返回退出码（0/2/3/4）。"""
 def main() -> int:
     parser = argparse.ArgumentParser(description="dsh-plugin-office-markdown fallback converter")
     parser.add_argument("--input", required=True)
